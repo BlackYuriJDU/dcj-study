@@ -44,3 +44,5 @@ pasted*.jpeg
 MEDRXIV-*.pdf
 MEDRXIV-*.pdf_Zone.Identifier
 bioRxiv-*.pdf
+# Ambiente virtual local (make install)
+.venv/
