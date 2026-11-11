@@ -11,8 +11,11 @@ Gera pipeline/reports/relatorio_gse160208.md com:
 - composição das amostras; 
 - top genes diferencialmente expressos (diferença de médias) em FC;
 - verificação específica de PRNP;
-- nota honesta: diferença de médias simples, sem teste estatístico formal
-  (t-teste virá em versão futura; aqui o objetivo é curadoria + triagem).
+- estatística inferencial no córtex frontal: teste t de Welch por gene e FDR
+  de Benjamini–Hochberg, com o universo dos testes declarado (genes sem
+  variância não são estimáveis e não recebem p-valor);
+- contagem de genes diferencialmente expressos sob o critério do artigo
+  original, com a ORDEM DOS FILTROS como parâmetro explícito (ver ORDEM_FILTROS).
 """
 import gzip
 import math
@@ -23,6 +26,25 @@ BASE = Path(__file__).resolve().parents[1]
 DATA = BASE / "data"
 REPORTS = BASE / "reports"
 MATRIX = DATA / "GSE160208_series_matrix.txt.gz"
+
+# --- Critério de gene diferencialmente expresso (DEG) -----------------------
+# O número de DEGs depende de DUAS escolhas que o artigo original não fixa de
+# forma inequívoca; por isso são parâmetros, não detalhes escondidos no código:
+#
+#   universo do FDR:
+#     "estimaveis" — só os genes com teste estimável (padrão declarado);
+#     "painel"     — os 800 genes do painel; os não estimáveis contam como
+#                    testes que nunca rejeitam (universo usado até a v0.4).
+#   ordem dos filtros:
+#     "fdr_no_universo"        — BH sobre o universo inteiro e, depois, o
+#                                filtro de magnitude |Δlog2| > DELTA_MIN;
+#     "magnitude_antes_do_fdr" — primeiro |Δlog2| > DELTA_MIN e, depois, BH só
+#                                sobre os genes que passaram.
+ORDENS_FILTROS = ("fdr_no_universo", "magnitude_antes_do_fdr")
+UNIVERSOS = ("estimaveis", "painel")
+ORDEM_FILTROS = "fdr_no_universo"
+UNIVERSO = "estimaveis"
+DELTA_MIN = 1.0          # |Δlog2| > 1 = mais de 2 vezes (critério do artigo)
 
 
 def tcdf_p(t: float, df: float) -> float:
@@ -74,15 +96,15 @@ def tcdf_p(t: float, df: float) -> float:
     return ibeta(df / 2.0, 0.5, df / (df + t * t))
 
 
-def welch(xs: list[float], ys: list[float]) -> tuple[float, float]:
-    """Teste t de Welch bicaudal: retorna (t, p)."""
+def welch(xs: list[float], ys: list[float]):
+    """Teste t de Welch bicaudal: retorna (t, p), ou None se não estimável."""
     n1, n2 = len(xs), len(ys)
     m1, m2 = sum(xs) / n1, sum(ys) / n2
     v1 = sum((x - m1) ** 2 for x in xs) / (n1 - 1)
     v2 = sum((y - m2) ** 2 for y in ys) / (n2 - 1)
     se2 = v1 / n1 + v2 / n2
     if se2 == 0:
-        return 0.0, 1.0
+        return None            # variância nula nos dois grupos: não estimável
     t = (m1 - m2) / math.sqrt(se2)
     df = se2 ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
     return t, min(1.0, tcdf_p(abs(t), df))
@@ -137,17 +159,98 @@ def extrair_tabela() -> tuple[list[str], list[list[float]], dict]:
     return amostras, genes, linhas_vals, meta, covs
 
 
-def main() -> None:
-    amostras, genes, vals, meta, covs = extrair_tabela()
+def bh(ps: list[float]) -> list[float]:
+    """Benjamini–Hochberg por posição: q[i] corresponde a ps[i]. O universo é
+    exatamente a lista recebida."""
+    m = len(ps)
+    ordem = sorted(range(m), key=lambda i: ps[i])
+    q = [0.0] * m
+    prev = 1.0
+    for k in range(m - 1, -1, -1):
+        prev = min(prev, ps[ordem[k]] * m / (k + 1))
+        q[ordem[k]] = prev
+    return q
 
-    # --- Classificação das amostras pelo título: FFCJD-*_FC etc. ----------
+
+def classificar_amostras(amostras: list[str]) -> dict[str, list[int]]:
+    """Índices por grupo a partir do título (ex.: 'FFCJD-12_FC'). Título que
+    não se encaixa em doença × região levanta erro (antes era ignorado)."""
     grupos: dict[str, list[int]] = {"CJD_FC": [], "CT_FC": [],
                                     "CJD_CB": [], "CT_CB": []}
     for i, nome in enumerate(amostras):
         doenca = "CJD" if "CJD" in nome else ("CT" if "CT" in nome else None)
         regiao = "FC" if "_FC" in nome else ("CB" if "_CB" in nome else None)
-        if doenca and regiao:
-            grupos[f"{doenca}_{regiao}"].append(i)
+        if doenca is None or regiao is None:
+            raise ValueError(f"amostra não classificável pelo título: {nome!r}")
+        grupos[f"{doenca}_{regiao}"].append(i)
+    return grupos
+
+
+def testar_fc(amostras=None, genes=None, vals=None):
+    """Teste de Welch por gene no córtex frontal (sCJD × controles).
+    Devolve lista de dicts: gene, delta (Δlog2 = média sCJD − média controles),
+    p (None se não estimável), estimavel."""
+    if amostras is None:
+        amostras, genes, vals, _meta, _covs = extrair_tabela()
+    if len(set(genes)) != len(genes):
+        raise ValueError("genes repetidos na matriz")
+    grupos = classificar_amostras(amostras)
+    out = []
+    for gi, g in enumerate(genes):
+        xs = [vals[gi][i] for i in grupos["CJD_FC"]]
+        ys = [vals[gi][i] for i in grupos["CT_FC"]]
+        w = welch(xs, ys)
+        out.append({"gene": g, "delta": sum(xs) / len(xs) - sum(ys) / len(ys),
+                    "p": None if w is None else w[1],
+                    "estimavel": w is not None})
+    return out
+
+
+def q_no_universo(res, universo: str = UNIVERSO) -> dict[str, float]:
+    """{gene: q} com BH sobre o universo declarado. No universo "painel" os
+    genes não estimáveis entram com p = 1 (e nunca são significativos)."""
+    if universo not in UNIVERSOS:
+        raise ValueError(f"universo desconhecido: {universo!r}")
+    if universo == "estimaveis":
+        sel = [r for r in res if r["estimavel"]]
+        ps = [r["p"] for r in sel]
+    else:
+        sel = list(res)
+        ps = [r["p"] if r["estimavel"] else 1.0 for r in sel]
+    return {r["gene"]: q for r, q in zip(sel, bh(ps))}
+
+
+def significativos(res, universo: str = UNIVERSO, q_max: float = 0.05):
+    """(up, down): genes estimáveis com q < q_max no universo declarado."""
+    q = q_no_universo(res, universo)
+    sig = [r for r in res if r["estimavel"] and q[r["gene"]] < q_max]
+    return ({r["gene"] for r in sig if r["delta"] > 0},
+            {r["gene"] for r in sig if r["delta"] < 0})
+
+
+def degs_criterio_artigo(res, ordem: str = ORDEM_FILTROS,
+                         universo: str = UNIVERSO, p_max: float = 0.05,
+                         q_max: float = 0.06, delta_min: float = DELTA_MIN):
+    """Conjunto de DEGs sob o critério do artigo original (p < 0,05; q ≤ 0,06;
+    mais de 2 vezes), com a ordem dos filtros explícita."""
+    if ordem not in ORDENS_FILTROS:
+        raise ValueError(f"ordem de filtros desconhecida: {ordem!r}")
+    est = [r for r in res if r["estimavel"]]
+    if ordem == "fdr_no_universo":
+        q = q_no_universo(res, universo)
+        return {r["gene"] for r in est if r["p"] < p_max
+                and q[r["gene"]] <= q_max and abs(r["delta"]) > delta_min}
+    grandes = [r for r in est if abs(r["delta"]) > delta_min]
+    qs = bh([r["p"] for r in grandes])
+    return {r["gene"] for r, q in zip(grandes, qs)
+            if r["p"] < p_max and q <= q_max}
+
+
+def main() -> None:
+    amostras, genes, vals, meta, covs = extrair_tabela()
+
+    # --- Classificação das amostras pelo título: FFCJD-*_FC etc. ----------
+    grupos = classificar_amostras(amostras)
 
     # --- Covariáveis por amostra (sexo, códon 129, subtipo) --------------
     def cov(i: int, chave: str) -> str:
@@ -178,7 +281,7 @@ def main() -> None:
         fc_diffs.append((g, m_cjd - m_ct, m_cjd, m_ct))
     fc_diffs.sort(key=lambda t: t[1])
 
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     L = [
         "# Relatório — Análise de dados REAIS: GSE160208",
         f"*Gerado por `analise_gse160208.py` em {agora}.*",
@@ -231,33 +334,87 @@ def main() -> None:
     L.append(f"- PRNP presente no painel: {'sim → Δ(CJD−CT) = %+.2f' % prnp[0][1] if prnp else 'não (painel é de neuroinflamação)'}")
 
     # --- Estatística inferencial: Welch t-test + BH-FDR -------------------
-    resultado = []
-    for gi, g in enumerate(genes):
-        xs = [vals[gi][i] for i in grupos["CJD_FC"]]
-        ys = [vals[gi][i] for i in grupos["CT_FC"]]
-        _, p = welch(xs, ys)
-        resultado.append((g, p))
-    m = len(resultado)
-    ordenado = sorted(resultado, key=lambda t: t[1])
-    fdr = [0.0] * m
-    prev = 1.0
-    for k in range(m - 1, -1, -1):
-        val = min(prev, ordenado[k][1] * m / (k + 1))
-        fdr[k] = val
-        prev = val
-    qmap = dict(zip((g for g, _ in ordenado), fdr))
-    sig = [(g, p, qmap[g]) for g, p in ordenado if qmap[g] < 0.05]
+    res = testar_fc(amostras, genes, vals)
+    n_est = sum(1 for r in res if r["estimavel"])
+    nao_est = [r["gene"] for r in res if not r["estimavel"]]
+    q_decl = q_no_universo(res, "estimaveis")
+    up, down = significativos(res, "estimaveis")
+    up_p, down_p = significativos(res, "painel")
+    sig = sorted(((r["gene"], r["p"], q_decl[r["gene"]]) for r in res
+                  if r["estimavel"] and q_decl[r["gene"]] < 0.05),
+                 key=lambda t: t[1])
 
     L += ["", "## Estatística inferencial (Welch + BH-FDR, córtex frontal)",
-          f"- Genes testados: {m} · Significativos com FDR<0.05: **{len(sig)}**"]
+          "",
+          f"- Genes no painel: {len(res)} · **não estimáveis: {len(nao_est)}** "
+          "(mesmo valor em todas as amostras do córtex frontal — o piso do "
+          "ensaio; sem variância não há teste nem p-valor).",
+          f"- **Universo declarado do FDR: {n_est} genes estimáveis.** "
+          f"Significativos com FDR<0.05: **{len(up) + len(down)}** "
+          f"({len(up)} ↑, {len(down)} ↓).",
+          f"- Universo do painel inteiro ({len(res)} genes, com os não "
+          "estimáveis contando como testes que nunca rejeitam; usado até a "
+          f"v0.4): **{len(up_p) + len(down_p)}** ({len(up_p)} ↑, "
+          f"{len(down_p)} ↓). A diferença entre as duas contagens é só o "
+          "tamanho do universo."]
     if sig:
         L += ["", "| Gene | p | q(FDR) |", "|---|---|---|"]
         L += [f"| {g} | {p:.2e} | {q:.2e} |" for g, p, q in sig[:15]]
 
-    L += ["", "## Nota de honestidade científica",
+    # --- Critério do artigo original: a contagem depende da ordem dos filtros
+    L += ["", "## Critério do artigo original: 184 genes, e do que esse número depende",
+          "",
+          "O artigo (Areškevičiūtė et al. 2020) reporta **184** genes "
+          "diferencialmente expressos no córtex frontal, com \"p<0.05, "
+          "q=0.06, >2-fold change\" (suplemento S1b), calculados no Qlucore. "
+          "Aplicando p < 0,05, q ≤ 0,06 e |Δlog2| > 1 aos dados depositados, a "
+          "contagem depende da ordem dos filtros e do universo do FDR:", "",
+          "| Ordem dos filtros | Universo do FDR | DEGs |", "|---|---|---|"]
+    rot_o = {"fdr_no_universo": "FDR no universo inteiro, depois magnitude",
+             "magnitude_antes_do_fdr": "magnitude primeiro, depois FDR só nos que passaram"}
+    n_grandes = sum(1 for r in res if r["estimavel"] and abs(r["delta"]) > DELTA_MIN)
+    for ordem in ORDENS_FILTROS:
+        for universo in UNIVERSOS:
+            if ordem == "magnitude_antes_do_fdr" and universo == "painel":
+                continue                      # o universo passa a ser o subconjunto
+            n = len(degs_criterio_artigo(res, ordem, universo))
+            uni = (f"{n_est} estimáveis" if universo == "estimaveis"
+                   else f"{len(res)} do painel")
+            if ordem == "magnitude_antes_do_fdr":
+                uni = f"{n_grandes} genes com \\|Δlog2\\| > 1"
+            L.append(f"| {rot_o[ordem]} | {uni} | **{n}** |")
+    n_nom = sum(1 for r in res if r["estimavel"] and r["p"] < 0.05
+                and abs(r["delta"]) > DELTA_MIN)
+    L += [f"| só p < 0,05 e \\|Δlog2\\| > 1 (sem exigir q) | — | **{n_nom}** |",
+          "",
+          "Leitura: a contagem de 184 é reproduzida quando o filtro de "
+          "magnitude vem antes do FDR (ou sem exigir q); com o FDR calculado "
+          "no universo inteiro, o resultado é 183. O gene que separa as duas "
+          "contagens é " + ", ".join(sorted(
+              degs_criterio_artigo(res, "magnitude_antes_do_fdr")
+              - degs_criterio_artigo(res, "fdr_no_universo"))) + ", um caso-limite "
+          "nos três cortes. Isto reproduz a CONTAGEM do artigo sob uma escolha "
+          "declarada de ordem de filtros; não é uma réplica exata do "
+          "procedimento dos autores: os q-valores do Qlucore não foram "
+          "reproduzidos, e p e log2FC são próximos dos oficiais, não idênticos "
+          "por construção. A comparação gene a gene com a lista do suplemento "
+          "S1b está em `validacao_cruzada_gse160208_artigo_original.md`; o "
+          "suplemento não é versionado neste repositório, e essa comparação "
+          "não foi refeita na correção de 2026-11.",
+          f"A ordem padrão deste script é `{ORDEM_FILTROS}`, no universo "
+          f"`{UNIVERSO}`."]
+
+    L += ["", "## Notas",
           "- Welch t-test bicaudal implementado em stdlib; FDR Benjamini–Hochberg.",
           "- Painel dirigido (800 genes neuroinflamatórios), não transcriptoma total.",
-          "- Sem correção para covariáveis (idade, PMI) — os metadados brutos não as trazem."]
+          "- Sem correção para covariáveis (idade, PMI) — os metadados brutos não as trazem.",
+          "- **\"Perda neuronal\" é inferência deste projeto** (apoiada nos genes ↓ "
+          "neurônio-específicos SLC17A6/NEFL/BDNF/TUBB3/GRIN2B), não conclusão do "
+          "artigo original, que foca em regionalidade, microglia e células "
+          "dendríticas. Ler como \"padrão consistente com disfunção neuronal\", "
+          "não como demonstração histológica.",
+          "- Genes não estimáveis (variância nula no córtex frontal): "
+          + ", ".join(sorted(nao_est)) + "."]
 
     destino = REPORTS / "relatorio_gse160208.md"
     destino.write_text("\n".join(L), encoding="utf-8")
