@@ -61,6 +61,9 @@ BODY = ParagraphStyle("body", parent=estilos["BodyText"], fontSize=9.5,
                       leading=13, alignment=4)
 MONO = ParagraphStyle("mono", parent=estilos["Code"], fontSize=7.5,
                       leading=9.5)
+# Bloco de citação do Markdown ("> ..."): usado na nota de correção da v0.5.
+NOTA = ParagraphStyle("nota", parent=BODY, leftIndent=10, rightIndent=6,
+                      backColor=colors.whitesmoke, borderPadding=3)
 
 
 def inline(t: str) -> str:
@@ -90,17 +93,21 @@ def para_tabela(linhas):
 
 
 def main():
+    m = re.search(r"Preprint draft (v[0-9.]+)", SRC.read_text(encoding="utf-8"))
+    versao = m.group(1) if m else ""
     doc = SimpleDocTemplate(str(DST), pagesize=A4,
                             leftMargin=2 * cm, rightMargin=2 * cm,
                             topMargin=2 * cm, bottomMargin=2 * cm,
-                            title="dcj-study preprint v0.4")
+                            title=f"dcj-study preprint {versao}")
     story, pbuf, tabbuf = [], [], []
+    estado = {"nota": False}
 
     def flush_para():
         if pbuf:
             texto = " ".join(pbuf).strip()
             if texto:
-                story.append(Paragraph(inline(texto), BODY))
+                story.append(Paragraph(inline(texto),
+                                       NOTA if estado["nota"] else BODY))
                 story.append(Spacer(1, 4))
             pbuf.clear()
 
@@ -119,6 +126,18 @@ def main():
             tabbuf.append(l)
             continue
         flush_tab()
+        # bloco de citação: tira o marcador e muda o estilo do parágrafo
+        em_nota = l.startswith(">")
+        if em_nota != estado["nota"]:
+            flush_para()
+            estado["nota"] = em_nota
+        if em_nota:
+            l = l[1:].strip()
+        # item de lista: cada item é um parágrafo próprio, com marcador
+        if l.startswith("- "):
+            flush_para()
+            pbuf.append("• " + l[2:])
+            continue
         if l.startswith("### "):
             flush_para(); story.append(Paragraph(inline(l[4:]), H3))
         elif l.startswith("## "):

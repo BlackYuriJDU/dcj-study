@@ -163,11 +163,11 @@
 
         <article class="placa reveal">
           <div class="placa-head"><h3 data-i18n="p2_t">Transcriptoma cerebral</h3><span class="placa-num">GSE160208</span></div>
-          <svg viewBox="0 0 660 176" role="img" data-i18n-aria="p2_aria" aria-label="Barra: 437 genes significantes de 800 testados, 54,6 por cento; réplica exata com r igual a 1.000">
+          <svg viewBox="0 0 660 176" role="img" data-i18n-aria="p2_aria" aria-label="Barra: 441 genes significantes de 742 testáveis, 59,4 por cento; contagem de 184 genes do artigo original reproduzida, com r igual a 1.000">
             <rect x="8" y="26" width="636" height="26" rx="6" fill="#E7EDF0"/>
-            <rect x="8" y="26" width="347" height="26" rx="6" fill="#17657F"/>
-            <text x="20" y="44" font-family="IBM Plex Mono" font-size="12" fill="#fff" font-weight="600">437 DEGs</text>
-            <text x="363" y="44" font-family="IBM Plex Mono" font-size="11" fill="#56626A">800 testados · 54,6% · Welch + BH-FDR</text>
+            <rect x="8" y="26" width="378" height="26" rx="6" fill="#17657F"/>
+            <text x="20" y="44" font-family="IBM Plex Mono" font-size="12" fill="#fff" font-weight="600">441 DEGs</text>
+            <text x="394" y="44" font-family="IBM Plex Mono" font-size="11" fill="#56626A">742 testáveis · 59,4% · Welch + BH-FDR</text>
             <line x1="8" y1="72" x2="652" y2="72" stroke="#DDE4E7"/>
             <text x="8" y="92" font-family="IBM Plex Mono" font-size="10" fill="#56626A" data-i18n="p2_linha1">neuroinflamação: os 4 hubs acima do limiar em toda a coorte</text>
             <rect x="8" y="104" width="82" height="16" rx="4" fill="#17657F"/><text x="16" y="116" font-family="IBM Plex Mono" font-size="9.5" fill="#fff">MYD88</text>
@@ -175,11 +175,11 @@
             <rect x="188" y="104" width="82" height="16" rx="4" fill="#17657F"/><text x="196" y="116" font-family="IBM Plex Mono" font-size="9.5" fill="#fff">C1QA</text>
             <rect x="278" y="104" width="82" height="16" rx="4" fill="#17657F"/><text x="286" y="116" font-family="IBM Plex Mono" font-size="9.5" fill="#fff">CSF1</text>
             <rect x="372" y="104" width="140" height="16" rx="4" fill="none" stroke="#A85B3F"/><text x="380" y="116" font-family="IBM Plex Mono" font-size="9.5" fill="#A85B3F">FDR &lt; 10⁻⁴ em todos</text>
-            <rect x="8" y="134" width="210" height="18" rx="4" fill="#16191C"/>
-            <text x="18" y="147" font-family="IBM Plex Mono" font-size="9.5" fill="#fff" font-weight="600">réplica exata: top-10 idêntico · r = 1.000</text>
-            <text x="228" y="147" font-family="IBM Plex Mono" font-size="9.5" fill="#8B98A0" data-i18n="p2_linha2">47 amostras · Copenhagen · MM1 vs. VV2 estratificado</text>
+            <rect x="8" y="134" width="252" height="18" rx="4" fill="#16191C"/>
+            <text x="18" y="147" font-family="IBM Plex Mono" font-size="9.5" fill="#fff" font-weight="600">184 DEGs do artigo reproduzidos · r = 1.000</text>
+            <text x="270" y="147" font-family="IBM Plex Mono" font-size="9.5" fill="#8B98A0" data-i18n="p2_linha2">47 amostras · Copenhagen · MM1 vs. VV2 estratificado</text>
           </svg>
-          <p class="placa-note" data-i18n="p2_note">contagem dupla registrada com honestidade: 437 DEGs pelo nosso critério (BH-FDR) e 184 pelo critério do artigo original — os dois universos estão no relatório</p>
+          <p class="placa-note" data-i18n="p2_note">duas contagens, com o universo declarado: 441 DEGs pelo nosso critério (BH-FDR sobre 742 genes testáveis; 437 se contados os 800 do painel) e 184 pelo critério do artigo original, reproduzido com o filtro de magnitude antes do FDR</p>
         </article>
 
         <article class="placa reveal">
@@ -195,7 +195,7 @@
             <text x="440" y="136" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#56626A">sCJD × Alzheimer</text>
             <text x="330" y="24" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#56626A">57 sCJD × 48 controles · sangue</text>
             <rect x="176" y="152" width="308" height="18" rx="4" fill="#16191C"/>
-            <text x="186" y="165" font-family="IBM Plex Mono" font-size="9.5" fill="#fff" font-weight="600" data-i18n="p3_linha">4/4 hits do artigo replicados · 60 miRNAs significantes</text>
+            <text x="186" y="165" font-family="IBM Plex Mono" font-size="9.5" fill="#fff" font-weight="600" data-i18n="p3_linha">89 miRNAs sem ajuste → 1 com ajuste (idade+sexo+RIN)</text>
           </svg>
           <div class="chips"><span class="chip">let-7i-5p</span><span class="chip">miR-16-5p</span><span class="chip">miR-93-5p</span><span class="chip">miR-106b-3p</span></div>
           <p class="placa-note" data-i18n="p3_note">honestidade da casa: com covariáveis (idade+sexo+RIN), 1 miRNA sobrevive ao FDR — a assinatura final do artigo é de 3 miRNAs por qPCR, e a fragilidade está documentada no nosso relatório</p>
@@ -205,9 +205,9 @@
           <div class="placa-head"><h3 data-i18n="p5_t">Integração cérebro × sangue</h3><span class="placa-num">miRTarBase 10.0</span></div>
           <div class="neg-caixa">
             <span class="badge v" data-i18n="p5_badge">RESULTADO NEGATIVO · DOCUMENTADO</span>
-            <p data-i18n="p5_p">Cruzamos os miRNAs do sangue com os 437 DEGs cerebrais do GSE160208 (alvos funcionais validados): <b>nenhum enriquecimento.</b> Interpretação honesta: o sangue reflete a periferia, não o programa transcricional cerebral — biomarcadores sanguíneos e mecanismo cerebral não são a mesma conversa.</p>
+            <p data-i18n="p5_p">Cruzamos os miRNAs do sangue com os genes mais expressos no cérebro (GSE160208), usando alvos funcionais validados: <b>nenhum enriquecimento detectado.</b> O teste tem pouco poder — só 3 a 13 alvos de cada miRNA estão no painel — e o resultado nulo não apoia nem contraria uma relação entre sangue e cérebro.</p>
           </div>
-          <p class="placa-note" data-i18n="p5_note">negativos se publicam: este resultado integra o §4.5 do preprint e evita que o próximo laboratório perca semanas na mesma hipótese</p>
+          <p class="placa-note" data-i18n="p5_note">negativos se publicam: este resultado integra o §4.5 do preprint, com o poder do teste declarado</p>
         </article>
 
         <article class="placa placa-full reveal">

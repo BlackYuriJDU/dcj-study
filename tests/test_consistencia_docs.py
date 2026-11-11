@@ -26,14 +26,16 @@ def ler(rel: str) -> str:
 
 
 # ---------------------------------------------------------------- GSE140069
-def test_relatorio_gse140069_e_v3():
+def test_relatorio_gse140069_e_v4():
+    """v4 = v3 + solver por QR, testes não estimáveis e universo declarado.
+    As contagens são recalculadas em tests/test_analises_expressao.py; aqui só
+    se confere que relatório e script são da mesma versão."""
     txt = ler("pipeline/reports/relatorio_gse140069.md")
-    assert "v3" in txt.splitlines()[0] + txt.splitlines()[1], \
-        "relatório GSE140069 não é v3"
+    assert "v4" in txt.splitlines()[0] and "v4" in txt.splitlines()[1], \
+        "relatório GSE140069 não é v4"
     script = ler("pipeline/scripts/analise_gse140069.py")
-    assert "v3" in script[:1200], "script analise_gse140069.py não declara v3"
-    for numero in ("84", "**1**", "0.048"):
-        assert numero in txt, f"número-chave v3 ausente no relatório: {numero}"
+    assert "v4" in script[:400], "script analise_gse140069.py não declara v4"
+    assert "Universo declarado" in txt
 
 
 # ---------------------------------------------------------------- coloc STX6
@@ -367,30 +369,11 @@ def test_sqtl_tem_ressalva_de_poder():
         "sQTL: 'exist' (prova negativa) reintroduzido"
 
 
-def test_preprint_v04_e_assinado():
-    txt = ler("preprint/manuscrito_preprint.md")
-    assert "v0.4" in txt, "preprint não está em v0.4"
-    assert "Arthur Araújo" in txt
-    assert "84 FDR-significant miRNAs" in txt, \
-        "wording FDR (correção 29/08) reverteu"
-
-
-def test_confundimento_idade_atribuido():
-    """Fase 2 (2026-10-04): o colapso 84→1 é atribuído a idade ~97% (88→4),
-    RIN 62 (88→26), sexo 3 (88→85), com VIF < 1.4. O manuscrito não pode voltar
-    a dizer "fully explains" (superdeclara) nem omitir a atribuição medida."""
-    txt = ler("preprint/manuscrito_preprint.md")
-    assert "fully explains" not in txt, \
-        "\"fully explains\" reintroduzido: a idade responde por ~97%, não 100%"
-    assert "97%" in txt, "atribuição medida (~97%) ausente do manuscrito"
-    assert "variance-inflation" in txt, \
-        "VIF não citado: sem ele a atribuição não é identificável"
-
-    rel = ler("pipeline/reports/relatorio_gse140069_idade.md")
-    for numero in ("113", "91", "88", "26", "1.37", "1.32"):
-        assert numero in rel, f"número-chave do teste de idade ausente: {numero}"
-    assert "não aditivas" in rel, \
-        "contribuições de covariáveis apresentadas como aditivas (somariam >100%)"
+# Os testes test_preprint_v04_e_assinado e test_confundimento_idade_atribuido
+# exigiam as strings "v0.4", "84 FDR-significant miRNAs" e "97%". Na correção
+# de 2026-11 (achados M4 e T3 da auditoria) foram substituídos por
+# tests/test_textos.py, que recalcula cada número antes de procurá-lo no
+# manuscrito e proíbe a atribuição percentual à idade.
 
 
 # ---------------------------------------------------------------- scripts

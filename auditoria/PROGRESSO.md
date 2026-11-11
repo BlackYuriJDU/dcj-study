@@ -173,3 +173,62 @@ Comprovação: `python -m pytest tests/test_integracao.py -q`
 Decisão 7: ondas 3 e 4 feitas em sequência, sem subagentes — a onda 4 importa
 funções que a onda 3 reescreve; rodar em paralelo criaria conflito no mesmo
 arquivo. Subagente fica para a verificação independente (onda 7).
+
+## Onda 5 — Reprodutibilidade (R2, R3, R5, R6, T2) ✅ (R6: ver resultado abaixo)
+
+Feito:
+- R2: `requirements.txt` com versões fixadas; CI instala a partir dele
+  (Python 3.13).
+- R3: Makefile com `.venv`, `dados-gwas`, `conferir-dados`,
+  `relatorios-offline`, `relatorios-gwas`, `relatorios-rede`, `relatorios`,
+  `pdf`; `clean` não toca em dados versionados.
+- R5: dez `.tbi` removidos da raiz; `*.tbi` ignorado.
+- T2: testes de infraestrutura (`tests/test_reprodutibilidade.py`), incluindo
+  um que roda cada script offline e exige saída igual ao relatório versionado.
+- `obter_gwas.py` retoma downloads interrompidos (Range).
+- `finemap_ld.py`: cache configurável por `DCJ_CACHE` (padrão `/tmp`).
+
+R6 — regeneração a partir de um clone limpo (outro diretório, `.venv` novo):
+- 1ª tentativa: `make install` e `make test` ok; `make dados-gwas` falhou por
+  reset de conexão (o script não retomava); os relatórios offline regeneraram,
+  e a comparação mostrou dois relatórios versionados defasados em relação aos
+  scripts. Os dois problemas foram corrigidos (retomada; teste de defasagem).
+- 2ª tentativa: ver "Resultado da 2ª regeneração" mais abaixo.
+
+Achados novos tratados nesta onda: gráfico de floresta dos miRNAs com valores
+digitados à mão e errados (passou a ser calculado); rótulos dos volcanos na
+altura de q em vez de p.
+
+Decisão 8: uma tentativa de limpar caches em `/tmp` foi barrada pelo
+ambiente (diretório compartilhado). Em vez de apagar, o cache do
+fine-mapping virou parâmetro (`DCJ_CACHE`).
+
+## Onda 6 — Textos (G9, M4, D1, D2, D3, T3) ✅
+
+Feito:
+- Manuscrito v0.5 (2026-11-11) com nota de correção no início; reescritos:
+  resumo, §2 (integridade), §3.4, §3.5, §4.1 (tabela de estratos), §4.5,
+  §4.7 inteiro, §4.8, discussão (2º e 4º pontos e parágrafo metodológico),
+  limitações, §8 e rodapé. PDF regenerado (o gerador ganhou suporte a bloco de
+  citação e a itens de lista).
+- `README.md`, `README.en.md`, `CITATION.cff` (resumo), site (pt e en: 441
+  DEGs, contagem de 184 sob ordem de filtros declarada, 89→1 miRNAs,
+  integração sem leitura de mecanismo).
+- `CORRECOES.md` na raiz.
+- T3: `test_preprint_v04_e_assinado`, `test_confundimento_idade_atribuido` e
+  `test_relatorio_gse140069_e_v3` substituídos; `tests/test_textos.py`
+  recalcula cada número antes de procurá-lo no manuscrito, nos READMEs e no
+  site.
+
+Achados novos tratados: o manuscrito dizia que o menor p do eQTL-meta era
+6,60e-47 em 180.949.780 (é 3,44e-47 em 180.951.692); tabela de λ por estrato
+com n em dobro; ENSG00000230124 era citado como RP5-1180C10.2 (o Ensembl hoje
+devolve ACBD6; o texto passou a citar o identificador).
+
+Não tratado (vai para o relatório final): referência 2 do manuscrito com
+título/autores divergentes do registro do próprio repositório; mapa do
+`README.en.md` lista arquivos não versionados; versão/DOI em `CITATION.cff` e
+a frase "release v1.0.0-preprint-clean" continuam os da v0.4 (publicar é
+decisão do autor).
+
+Comprovação: `python -m pytest tests/ -q -rs` → 196 passed, 0 pulados.
