@@ -12,7 +12,7 @@ Método honesto (sem genótipos individuais):
 - λ_GC global e por faixas de MAF/EAF para diagnosticar estratificação.
 
 Saídas: pipeline/reports/relatorio_finemap_loci.md (v2) e relatorio_lambda_gc.md
-Cache: /tmp/stx6_rsid_map.json e /tmp/ld_*.json evitam re-consultas.
+Cache: $DCJ_CACHE (padrão /tmp): *_rsid_map.json e ld_*.json evitam re-consultas.
 """
 import gzip
 import json
@@ -31,7 +31,10 @@ from coloc_abf import abf as _abf_lib, W_CASO_CONTROLE  # noqa: E402
 from gwas_fonte import exigir_gwas, MEDIANA_CHI2_1GL  # noqa: E402
 
 REPORTS = BASE / "reports"
-CACHE = Path("/tmp")
+# Cache das consultas de LD/rsID (descartável). Diretório configurável por
+# DCJ_CACHE para permitir uma execução do zero sem apagar nada em /tmp.
+CACHE = Path(os.environ.get("DCJ_CACHE", "/tmp"))
+CACHE.mkdir(parents=True, exist_ok=True)
 
 REGIOES = {
     "STX6": ("1", 180_900_000, 181_000_000),
