@@ -15,7 +15,9 @@ import datetime
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-SUMSTATS = BASE / "data" / "GCST90001389_buildGRCh37.tsv.gz"
+import sys as _sys
+_sys.path.insert(0, str(BASE / "lib"))
+from gwas_fonte import exigir_gwas  # noqa: E402  (mensagem clara se o GWAS faltar)
 REPORTS = BASE / "reports"
 
 REGIOES = {
@@ -27,7 +29,7 @@ REGIOES = {
 
 def main() -> None:
     resultados = {k: [] for k in REGIOES}
-    with gzip.open(SUMSTATS, "rt") as fh:
+    with gzip.open(exigir_gwas(), "rt") as fh:
         header = fh.readline().rstrip("\n").split("\t")
         col = {n: i for i, n in enumerate(header)}
         for linha in fh:

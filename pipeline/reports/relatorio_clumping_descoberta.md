@@ -1,5 +1,5 @@
 # Clumping de descoberta — o pipeline acha os loci do zero?
-*`clumping_descoberta.py` em 2026-08-26 07:46. Varredura cega de 6,314,492 variantes; limiar p<1e-05; clumping guloso por
+*`clumping_descoberta.py` em 2026-11-11 03:28. Varredura cega de 6,314,492 variantes; limiar p<1e-05; clumping guloso por
 distância ±500 kb (lead = menor p do cluster).*
 
 **Resultado: 35 clusters independentes.**

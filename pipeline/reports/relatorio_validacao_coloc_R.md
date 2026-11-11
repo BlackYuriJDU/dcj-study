@@ -36,6 +36,7 @@ A fórmula antiga foi removida de todo o código. O que valida a implementação
 ## Fine-mapping: mesmo fator de Bayes
 
 `finemap_ld.py` usa a mesma função de fator de Bayes de Wakefield da colocalização (`coloc_abf.abf`, W = 0,04). A forma já estava correta nesse script; a troca pela função única não altera os resultados.
+Massa posterior do cluster de STX6 (r² ≥ 0,8 com o lead): painel ALL 90.5%; painel EUR 90.5% (ver `relatorio_finemap_loci.md` e `relatorio_finemap_loci_EUR.md`).
 
 ## Reprodução
 

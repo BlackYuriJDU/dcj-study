@@ -25,7 +25,9 @@ from collections import Counter
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-SUMSTATS = BASE / "data" / "GCST90001389_buildGRCh37.tsv.gz"
+import sys as _sys
+_sys.path.insert(0, str(BASE / "lib"))
+from gwas_fonte import exigir_gwas, lambda_gc as _lambda_gc, MEDIANA_CHI2_1GL  # noqa: E402
 REPORTS = BASE / "reports"
 
 STX6_CHR = "1"
@@ -45,7 +47,7 @@ def main() -> None:
     stx6_best: tuple | None = None
     top20: list[tuple] = []  # heap implícito por p
 
-    with gzip.open(SUMSTATS, "rt") as fh:
+    with gzip.open(exigir_gwas(), "rt") as fh:
         header = fh.readline().rstrip("\n").split("\t")
         col = {name: i for i, name in enumerate(header)}
         for linha in fh:
@@ -95,9 +97,9 @@ def main() -> None:
     chi2_vals.sort()
     n_chi = len(chi2_vals)
     mediana_chi2 = chi2_vals[n_chi // 2] if n_chi else float("nan")
-    lambda_gc = mediana_chi2 / 0.4549 if n_chi else float("nan")
+    lambda_gc = _lambda_gc(chi2_vals)      # mediana / 0.454936 (constante única)
 
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     L = [
         "# QC independente — GWAS sCJD GCST90001389 (REAIS, 4.110 casos × 13.569 controles)",
         f"*`qc_gwas_gcst90001389.py` em {agora}. Fonte: GWAS Catalog/EBI, GRCh37, "
@@ -113,7 +115,7 @@ def main() -> None:
         "## 2. Distribuições",
         f"- EAF: min={maf_min:.4f}, max={maf_max:.4f}, variantes no piso (0/1): {n_piso_maf}",
         f"- chi2=(beta/SE)^2: mediana={mediana_chi2:.4f}",
-        f"- **lambda_GC = {lambda_gc:.4f}** "
+        f"- **lambda_GC = {lambda_gc:.4f}** (mediana / {MEDIANA_CHI2_1GL}, sobre todas as variantes) "
         + ("(sem inflação relevante; ≤1.05 é saudável)" if lambda_gc <= 1.05
            else "(⚠ inflação — investigar estratificação/ancestralidade)"),
         "",
@@ -124,6 +126,37 @@ def main() -> None:
         L += ["", "| p | chr | pos | OA>EA | EAF | beta | SE |", "|---|---|---|---|---|---|---|"]
         for p, c, pos, oa, ea, eaf, beta, se in sorted(hits_sig)[:30]:
             L.append(f"| {p:.2e} | {c} | {pos:,} | {oa}>{ea} | {eaf:.3f} | {beta:.3f} | {se:.3f} |")
+
+    # --- 3b. Os três loci publicados: melhor variante de cada um -----------
+    LOCI_PUBLICADOS = [
+        ("PRNP", "20", 4_600_000, 4_700_000,
+         "região do gene da proteína priônica (chr20p13)"),
+        ("STX6", "1", 180_900_000, 181_000_000,
+         "dentro do gene STX6 (Ensembl GRCh37: 180,941,861–180,992,047)"),
+        ("GAL3ST1", "22", 30_900_000, 31_000_000,
+         "borda 5' do gene GAL3ST1 (Ensembl GRCh37: 30,950,622–30,970,574)"),
+    ]
+    L += ["", "## 3b. Os três loci publicados, reproduzidos",
+          "",
+          "O artigo original (Jones et al., Lancet Neurol 2020) reporta três "
+          "loci com significância genômica: PRNP, STX6 e GAL3ST1. Melhor "
+          "variante deste QC em cada um:", "",
+          "| Locus | Melhor variante (GRCh37) | p | hits p<5e-8 no locus | Anotação |",
+          "|---|---|---|---|---|"]
+    n_rep = 0
+    for nome, crom, ini, fim, nota in LOCI_PUBLICADOS:
+        no_locus = sorted(h for h in hits_sig
+                          if h[1] == crom and ini <= h[2] <= fim)
+        if no_locus:
+            n_rep += 1
+            p, c, pos, *_ = no_locus[0]
+            L.append(f"| **{nome}** | chr{c}:{pos:,} | {p:.2e} | "
+                     f"{len(no_locus)} | {nota} |")
+        else:
+            L.append(f"| **{nome}** | — | — | 0 | sem hit genômico-significativo |")
+    L += ["", f"**{n_rep} de 3 loci publicados reproduzidos** a partir das "
+          "estatísticas-resumo depositadas. É uma conferência dos dados "
+          "públicos, não uma replicação em coorte independente."]
 
     L += ["", "## 4. Locus STX6 (candidato a replicação — cf. Brain 2025)",
           f"- Janela: chr{STX6_CHR}:{STX6_START:,}-{STX6_END:,} (GRCh37)"]

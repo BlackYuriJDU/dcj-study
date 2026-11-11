@@ -14,7 +14,9 @@ import datetime
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-GWAS_GZ = BASE / "data" / "GCST90001389_buildGRCh37.tsv.gz"
+import sys as _sys
+_sys.path.insert(0, str(BASE / "lib"))
+from gwas_fonte import exigir_gwas  # noqa: E402  (mensagem clara se o GWAS faltar)
 REPORTS = BASE / "reports"
 
 LIMIAR = 1e-5
@@ -31,7 +33,7 @@ def main() -> None:
     agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     sig = []
     total = 0
-    with gzip.open(GWAS_GZ, "rt") as fh:
+    with gzip.open(exigir_gwas(), "rt") as fh:
         hdr = fh.readline().rstrip("\n").split("\t")
         c = {n: i for i, n in enumerate(hdr)}
         for line in fh:

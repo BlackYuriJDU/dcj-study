@@ -115,7 +115,9 @@ def gwas_variantes():
     """Posições do GWAS na janela (GRCh37), cacheadas em memória."""
     import gzip as _gz
     out = set()
-    with _gz.open(DATA / "GCST90001389_buildGRCh37.tsv.gz", "rt") as fh:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+    from gwas_fonte import exigir_gwas
+    with _gz.open(exigir_gwas(), "rt") as fh:
         hdr = fh.readline().rstrip("\n").split("\t")
         ci, pi = hdr.index("chromosome"), hdr.index("base_pair_location")
         for linha in fh:

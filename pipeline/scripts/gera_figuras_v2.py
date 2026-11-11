@@ -16,7 +16,10 @@ LOCI = {"PRNP": ("20", 4_672_307), "GAL3ST1": ("22", 30_950_360),
         "STX6": ("1", 180_961_245)}
 xs, ys, cs, labels = [], [], [], []
 offset, chr_max, cores = 0, {}, ["#2563eb", "#7c3aed"]
-with gzip.open(BASE / "data" / "GCST90001389_buildGRCh37.tsv.gz", "rt") as fh:
+import sys as _sys
+_sys.path.insert(0, str(BASE / "lib"))
+from gwas_fonte import exigir_gwas  # noqa: E402  (mensagem clara se o GWAS faltar)
+with gzip.open(exigir_gwas(), "rt") as fh:
     hdr = fh.readline().split("\t")
     c = {n: i for i, n in enumerate(h) for h in [hdr]}[  # noqa
         "p_value"] if False else {n: i for i, n in enumerate(hdr)}

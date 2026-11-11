@@ -28,7 +28,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BASE / "lib"))
 from coloc_abf import abf as _abf_lib, W_CASO_CONTROLE  # noqa: E402
-from gwas_fonte import exigir_gwas  # noqa: E402
+from gwas_fonte import exigir_gwas, MEDIANA_CHI2_1GL  # noqa: E402
 
 REPORTS = BASE / "reports"
 CACHE = Path("/tmp")
@@ -133,10 +133,10 @@ def ld_do_lead(lead_rsid: str, cache_name: str):
 
 
 def main() -> None:
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     L = ["# Fine-mapping v2 — LD real (Ensembl/1000G phase 3) + credible sets descritivos",
          f"*`finemap_ld.py` em {agora}. População: {POP}. Método: ABF de Wakefield "
-         f"(W={W}) + agrupamento por r²≥{R2_CLUSTER} ao lead. Approximate — sem modelo "
+         f"(W={W:g}) + agrupamento por r²≥{R2_CLUSTER} ao lead. Approximate — sem modelo "
          "conjunto (SuSiE exigiria genótipos individuais).*", ""]
     lam_rows = []
     todos_rs = []
@@ -177,14 +177,14 @@ def main() -> None:
             # amostragem p/ λ global estável (todos os GWS + 10% sistemática)
             if len(chi_all) > 2_000_000 and n_total % 10 != 0:
                 chi_all.pop()
-    lam_global = sorted(chi_all)[len(chi_all)//2] / 0.454936
+    lam_global = sorted(chi_all)[len(chi_all)//2] / MEDIANA_CHI2_1GL
     L_lam = [f"# Diagnóstico λ_GC — GCST90001389",
              f"*`finemap_ld.py` em {agora}. λ = mediana(χ²)/0.454936.*", "",
              f"- λ global (amostra sistemática de {len(chi_all):,}): **{lam_global:.4f}**", "",
              "| Estrato de MAF | n | λ do estrato |", "|---|---|---|"]
     for nome, vals in chi_bins.items():
         vals.sort()
-        lam = vals[len(vals)//2] / 0.454936
+        lam = vals[len(vals)//2] / MEDIANA_CHI2_1GL
         lam_rows.append((nome, len(vals), lam))
         L_lam.append(f"| {nome} | {len(vals):,} | {lam:.4f} |")
     grad = max(l for _, _, l in lam_rows) - min(l for _, _, l in lam_rows)

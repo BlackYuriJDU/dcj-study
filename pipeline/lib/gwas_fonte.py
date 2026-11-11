@@ -19,6 +19,18 @@ GWAS_MD5_URL = _DIR_FTP + "md5sum.txt"
 GWAS_MD5 = "071790d80ccae0b41adabc7e0eefbf53"
 
 
+# Mediana da qui-quadrado com 1 grau de liberdade, qchisq(0.5, 1). Constante
+# única para o lambda_GC em todos os scripts (antes: 0.4549 num e 0.454936
+# noutro, o que dava 1,0588 e 1,0587 para os mesmos dados).
+MEDIANA_CHI2_1GL = 0.454936
+
+
+def lambda_gc(chi2_ordenado):
+    """lambda_GC = mediana(chi2) / mediana teórica; recebe a lista ORDENADA."""
+    n = len(chi2_ordenado)
+    return chi2_ordenado[n // 2] / MEDIANA_CHI2_1GL if n else float("nan")
+
+
 def md5_arquivo(caminho, bloco=1 << 20):
     """MD5 em fluxo (não carrega o arquivo em memória)."""
     h = hashlib.md5()

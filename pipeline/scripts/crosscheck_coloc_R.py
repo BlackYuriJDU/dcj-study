@@ -89,7 +89,7 @@ def _massa_finemap(nome):
     p = REPORTS / nome
     if not p.exists():
         return None
-    m = re.search(r"STX6.*?massa posterior[^\n]*?\*\*([\d.,]+%)\*\*",
+    m = re.search(r"## Locus STX6.*?\*\*r²≥0\.8: ([\d.,]+%)\*\*",
                   p.read_text(encoding="utf-8"), re.S)
     return m.group(1) if m else None
 
