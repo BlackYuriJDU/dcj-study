@@ -1,72 +1,44 @@
-# Validação cruzada do coloc próprio — R (equações exatas + coloc.abf padrão) e LD EUR
+# Validação da colocalização contra o pacote R `coloc`
 
-*Executado em 2026-08-29 · R 4.5 / coloc 5.2.3 / susieR 0.14.2 (conda-forge, aarch64)
-· dados: `pipeline/data/stx6_crosscheck_input.tsv` (390 variantes STX6 harmonizadas,
-geradas por `crosscheck_coloc_R.py` a partir do MESMO pipeline validado).*
+*`crosscheck_coloc_R.py` em 2026-11-11. Compara a implementação única do projeto (`pipeline/lib/coloc_abf.py`) com a saída do `coloc.abf` real (R 4.5, coloc 5.2.3, executado em 2026-08-29) guardada em `tests/fixtures/`.*
 
-## (A) Reimplementação exata das equações em R — ACORDO A 6 DECIMAIS
+## O que aconteceu (registro da correção de 2026-11)
 
-Mesma fórmula (ABF de Wakefield, W = 0.04² = 0.0016) e mesmos priors
-(p1 = p2 = 10⁻⁴, p12 = 10⁻⁵; conservador 10⁻⁶/10⁻⁶/10⁻⁷), reimplementados
-independentemente em R (`coloc_crosscheck_R.R`):
+A versão deste relatório publicada até a v0.4 concluía que "a máquina está correta — acordo a 6 decimais" e que STX6 não colocalizava (H3 = 0,994997). As duas conclusões estavam erradas:
 
-| Prior | Hipótese | Python (relatório 26/08) | R (29/08) |
+1. **A parte (A) não era uma validação.** Ela reimplementava em R a mesma fórmula do Python, com o mesmo erro: o termo de H4 multiplicado por p1·p2·p12 em vez de p12. Duas cópias da mesma equação errada concordam entre si; a concordância não dizia nada sobre a equação.
+2. **A parte (B) já mostrava o resultado certo.** O `coloc.abf` do pacote oficial devolvia PP.H4 = 0,9796 para os mesmos 390 pares. A diferença foi explicada como "dependência de prior". Não era: com o mesmo prior de efeito do código antigo (W = 0,0016) e apenas a combinação corrigida, PP.H4 = 0,9788.
+3. **Havia mais dois erros na mesma função**: o fator de Bayes usava √r onde Wakefield usa √(1−r), e W = 0,04² era rotulado "coloc padrão" (o padrão do `coloc` é variância 0,04 para caso-controle e 0,0225·sdY² para traço quantitativo). Mudam pouco o H4 desta região, mas eram erros de fórmula.
+
+A fórmula antiga foi removida de todo o código. O que valida a implementação atual são (i) este oráculo, (ii) casos sintéticos conferidos contra a enumeração explícita das configurações causais e (iii) as âncoras numéricas da auditoria — todos em `tests/test_coloc_abf.py`.
+
+| Configuração, entrada de 390 variantes da v0.4 | H2 | H3 | H4 |
 |---|---|---|---|
-| padrão | H3 | 0.9950 | **0.994997** |
-| padrão | H2 | (não exibido antes) | 0.005002 |
-| conservador | H3 | 0.6654 | **0.665429** |
-| conservador | H2 | (não exibido antes) | 0.334571 |
+| Publicada até a v0.4 (três erros; valores históricos) | 0,005002 | 0,994997 | 4,6×10⁻⁷ |
+| Fórmula correta com o prior de efeito antigo (W = 0,0016) | 0.000164 | 0.021160 | 0.978676 |
+| **Conforme o `coloc` (W = 0,04 / 0,0225)** | 7.04e-06 | 0.020388 | **0.979605** |
+| `coloc.abf` 5.2.3 real (registrado em 2026-08-29) | 7×10⁻⁶ | 0,0204 | 0,9796 |
 
-A máquina (ABF + combinação H0..H4) está correta — duas implementações
-independentes das mesmas equações concordam ao limite da precisão exibida.
+## Oráculo: `coloc.abf` real × implementação do projeto
 
-## (B) coloc.abf padrão do campo (pacote R) — mesma conclusão, split prior-dependente
+- Entrada: `tests/fixtures/stx6_crosscheck_input_v04.tsv` (390 variantes).
+- Referência: `tests/fixtures/stx6_crosscheck_colocR_output_v04.tsv`, coluna `PP4_colocR` (posterior por variante, `SNP.PP.H4`).
+- **Diferença máxima, variante a variante: 1.55e-15.**
+- Resumo do projeto: PP.H4 = 0.9796, PP.H3 = 0.0204, PP.H2 = 7.0e-06 — igual ao que o pacote registrou (0,9796 / 0,0204 / 7×10⁻⁶).
+- O `coloc.abf` foi chamado com `type = "cc"` para o GWAS e `type = "quant"`, `sdY = 1` para o eQTL-meta, com β e variância de β fornecidos. Nessa forma, N, MAF e a fração de casos não entram no fator de Bayes.
 
-`coloc.abf` (R coloc 5.2.3) sobre os mesmos 390 pares, com seus próprios
-defaults de parametrização: GWAS type="cc" (s = 4110/17679), eQTL-meta
-type="quant" com sdY = 1 e N efetivo por variante (inversão de
-Var = sdY²/(2Np(1-p)), MAF do GWAS):
+## Entrada atual (harmonização por variante completa)
 
-- **PP.H4 = 0.9796 · H3 = 0.0204 · H2 = 7×10⁻⁶ · H1 ≈ 0 · H0 ≈ 0**
-- **H2+H3+H4 = 1.0000** — a afirmação "ambos os sinais são reais na região"
-  vale sob TODAS as parametrizações testadas (nosso padrão: 1.0000;
-  nosso conservador: 1.0000; coloc R: 1.0000).
-- A divisão H4 (compartilhado) vs H3/H2 (distintas) **depende do prior**:
-  com W = 0.04² a massa vai para H3 (99.5%); com o prior mais restrito do
-  coloc R vai para H4 (98.0%). Sob r² ≥ 0.97 dentro do cluster, as duas
-  configurações são indistinguíveis em verossimilhança — exatamente a
-  limitação já declarada no preprint. O reporte combinado é a escolha certa.
-- Ranking por-variante: Spearman ρ = **0.914** entre PP.H4 do coloc R e a
-  massa diagonal ABF nossa (`stx6_crosscheck_colocR_output.tsv`).
+- `pipeline/data/stx6_crosscheck_input.tsv`: 390 variantes; PP.H4 = 0.979605, PP.H3 = 0.020388, PP.H2 = 7.04e-06.
+- Mesmas 390 posições da entrada da v0.4. O efeito do eQTL-meta mudou em 1 variante(s) (chr1:180,975,614): sítio multialélico em que a versão anterior somava efeitos de alelos diferentes.
+- `coloc.abf` real executado sobre a entrada atual (`pipeline/data/stx6_crosscheck_colocR_output.tsv`; coloc.abf: coloc 5.2.3, R version 4.5.3 (2026-03-11); PP.H3=0.020388 PP.H4=0.979605; nsnps=390): **diferença máxima por variante 1.55e-15**.
 
-**Correção honesta incorporada**: o relatório anterior dizia
-"H0 = H1 = H2 ≈ 0" — impreciso (H2 = 0.005 no padrão e 0.335 no conservador).
-H2 NÃO é hipótese nula: é "duas variantes causais distintas". O relatório
-`relatorio_coloc_meta_stx6.md` foi regenerado exibindo H2 e o combinado
-H2+H3+H4; a afirmação robusta passou a ser essa massa combinada.
+## Fine-mapping: mesmo fator de Bayes
 
-## (C) Sensibilidade do fine-mapping ao painel de LD — ALL vs EUR
+`finemap_ld.py` usa a mesma função de fator de Bayes de Wakefield da colocalização (`coloc_abf.abf`, W = 0,04). A forma já estava correta nesse script; a troca pela função única não altera os resultados.
 
-`finemap_ld.py` re-executado com `LD_POP=1000GENOMES:phase_3:EUR`
-(população-matched à coorte UK do GWAS) vs o painel ALL original:
+## Reprodução
 
-| Locus | Massa no cluster (r²≥0.8) ALL | EUR | Leitura |
-|---|---|---|---|
-| STX6 (lead rs11586493) | **90.5%** | **90.5%** | idêntico — bloco coeso em ambos |
-| PRNP (âncora rs2093390) | 58.9% | **80.9%** | painel EUR marca melhor o bloco do códon 129 |
-| GAL3ST1 (âncora rs8142452) | 0.0% (mal marcado) | 0.0% | haplótipo de baixa frequência em ambos |
-
-- λ_GC reproduzido idêntico (1.0587; mediana imune ao bug de contagem
-  duplicada nos estratos de MAF — corrigido; λ por estrato inalterado, `n`
-  do relatório agora é o real).
-- Conclusão: as afirmações de fine-mapping do preprint são robustas à
-  escolha do painel; para PRNP o intervalo honesto de massa no cluster é
-  59–81% (r²≥0.8) dependendo do painel, 100% em r²≥0.5 nos dois.
-
-## Ferramentas e reprodutibilidade
-
-- R via micromamba (aarch64), env `rcross`: `r-base`, `r-coloc` 5.2.3,
-  `r-susier` 0.14.2 (conda-forge)
-- `pipeline/scripts/crosscheck_coloc_R.py` → dados de entrada (390 variantes)
-- `pipeline/scripts/coloc_crosscheck_R.R` → validações (A) e (B)
-- `LD_POP=... python3 pipeline/scripts/finemap_ld.py` → sensibilidade (C)
+- `python3 pipeline/scripts/crosscheck_coloc_R.py --so-oraculo` (sem GWAS e sem R)
+- `python3 -m pytest tests/test_coloc_abf.py -q`
+- Opcional, com R e `coloc` instalados: `Rscript pipeline/scripts/coloc_crosscheck_R.R`

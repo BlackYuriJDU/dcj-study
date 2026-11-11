@@ -22,10 +22,14 @@ import time
 import urllib.parse
 import urllib.request
 import datetime
+import sys
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-SUMSTATS = BASE / "data" / "GCST90001389_buildGRCh37.tsv.gz"
+sys.path.insert(0, str(BASE / "lib"))
+from coloc_abf import abf as _abf_lib, W_CASO_CONTROLE  # noqa: E402
+from gwas_fonte import exigir_gwas  # noqa: E402
+
 REPORTS = BASE / "reports"
 CACHE = Path("/tmp")
 
@@ -37,7 +41,7 @@ REGIOES = {
 POP = os.environ.get("LD_POP", "1000GENOMES:phase_3:ALL")
 POP_TAG = POP.split(":")[-1]   # ALL/EUR/... — sufixo de cache e relatório
 R2_CLUSTER = 0.80
-W = 0.04          # variância do prior de Wakefield sobre log(OR)
+W = W_CASO_CONTROLE   # 0,04: variância do prior de Wakefield sobre log(OR)
 
 
 def http_json(url: str, tentativas: int = 3):
@@ -93,17 +97,9 @@ def esummary_pos(rsids: list[str]):
     return out
 
 
-def abf(beta: float, se: float, w: float = W) -> float:
-    """Approximate Bayes Factor de Wakefield."""
-    if se <= 0:
-        return 0.0
-    z2 = (beta / se) ** 2
-    return math.sqrt(se ** 2 / (se ** 2 + w)) * math.exp(z2 * w / (2 * (se ** 2 + w)))
-
-
 def carregar_regiao(crom, ini, fim):
     recs = []
-    with gzip.open(SUMSTATS, "rt") as fh:
+    with gzip.open(exigir_gwas(), "rt") as fh:
         hdr = fh.readline().rstrip("\n").split("\t")
         c = {n: i for i, n in enumerate(hdr)}
         for linha in fh:
@@ -153,7 +149,7 @@ def main() -> None:
     n_total = 0
     chi_all = []
     PASSO_AMOSTRA = 10   # mantém cada 10ª linha para o λ global (independe de ordem)
-    with gzip.open(SUMSTATS, "rt") as fh:
+    with gzip.open(exigir_gwas(), "rt") as fh:
         hdr = fh.readline().rstrip("\n").split("\t")
         c = {n: i for i, n in enumerate(hdr)}
         for linha in fh:
@@ -284,7 +280,9 @@ def main() -> None:
                         r2_lead[pp] = max(r2_lead.get(pp, 0.0), float(d["r2"]))
 
         for r in recs:
-            r["abf"] = abf(r["beta"], r["se"])
+            # fator de Bayes de Wakefield: implementação única do projeto
+            # (pipeline/lib/coloc_abf.py), a mesma usada pela colocalização
+            r["abf"] = _abf_lib(r["beta"], r["se"], W) if r["se"] > 0 else 0.0
             r["r2_lead"] = r2_lead.get(r["pos"])
         soma = sum(r["abf"] for r in recs) or 1.0
         for r in recs:

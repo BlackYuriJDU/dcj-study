@@ -37,12 +37,20 @@ def test_relatorio_gse140069_e_v3():
 
 
 # ---------------------------------------------------------------- coloc STX6
-def test_coloc_meta_tem_h2_e_validacao():
-    txt = ler("pipeline/reports/relatorio_coloc_meta_stx6.md")
-    assert "H2" in txt, "relatório coloc não exibe H2 (correção 29/08)"
-    assert "0.9950" in txt, "H3 padrão (0.9950) ausente"
-    valid = ler("pipeline/reports/relatorio_validacao_coloc_R.md")
-    assert "0.994997" in valid, "validação R (0.994997) ausente"
+# O teste que havia aqui (test_coloc_meta_tem_h2_e_validacao) exigia as strings
+# "0.9950" e "0.994997" nos relatórios: travava o resultado de uma fórmula
+# errada (auditoria 2026-11, achado T1). Foi substituído por testes que
+# CALCULAM a colocalização e exigem que os relatórios citem o valor calculado:
+# tests/test_coloc_abf.py (sintéticos, oráculo do coloc.abf real, âncoras) e
+# tests/test_coloc_pipeline.py (harmonização → meta → colocalização).
+def test_relatorios_de_coloc_nao_citam_o_resultado_da_formula_antiga():
+    for rel in ("pipeline/reports/relatorio_coloc_meta_stx6.md",
+                "pipeline/reports/relatorio_coloc_stx6.md",
+                "pipeline/reports/relatorio_coloc_sqtl_stx6.md"):
+        txt = ler(rel)
+        assert "0.9950" not in txt and "0.6654" not in txt, \
+            f"{rel} ainda cita H3 da fórmula antiga"
+        assert "Bonferroni: limiar H4" not in txt
 
 
 def test_validacao_eur_existe():
