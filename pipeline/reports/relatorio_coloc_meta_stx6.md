@@ -1,5 +1,5 @@
 # Colocalização STX6 — meta-eQTL de cinco conjuntos cerebrais × GWAS sCJD
-*`coloc_meta_stx6.py` em 2026-11-11. Meta-análise por variância inversa (efeito fixo) de 5 conjuntos do eQTL Catalogue r8 (2.156 amostras no total; proveniência e checksums em `pipeline/data/proveniencia_qtl.tsv`) contra o GWAS de sCJD (GCST90001389. n = 17.679). Colocalização: implementação única em `pipeline/lib/coloc_abf.py`. conforme o pacote R `coloc`.*
+*`coloc_meta_stx6.py` em 2026-11-11. Meta-análise por variância inversa (efeito fixo) de 5 conjuntos do eQTL Catalogue r8 (2.156 amostras no total; proveniência e checksums em `pipeline/data/proveniencia_qtl.tsv`) contra o GWAS de sCJD (GCST90001389, n = 17.679). Colocalização: implementação única em `pipeline/lib/coloc_abf.py`, conforme o pacote R `coloc`.*
 
 > **Correção de 2026-11.** As versões até a v0.4 deste relatório davam PP.H4 ≈ 0 e H3 ≈ 0,995. O número vinha de um erro de fórmula: o termo de H4 era multiplicado por p1·p2·p12 em vez de p12 (um fator de 10⁻⁸ com os priors padrão). Com a combinação correta e os mesmos dados, PP.H4 ≈ 0,98. Ver `CORRECOES.md` e `relatorio_validacao_coloc_R.md`.
 

@@ -30,7 +30,7 @@ CONHECIDOS = {
 
 
 def main() -> None:
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     sig = []
     total = 0
     with gzip.open(exigir_gwas(), "rt") as fh:

@@ -1,5 +1,5 @@
 # Validação do offset GRCh38→GRCh37 usado na colocalização de STX6
-*`valida_offset_grch38_grch37.py` em 2026-11-11 03:32. Substitui a suposição de −30.864 bp por uma medição contra a API de assembly map do Ensembl.*
+*`valida_offset_grch38_grch37.py` em 2026-11-11. Substitui a suposição de −30.864 bp por uma medição contra a API de assembly map do Ensembl.*
 
 A colocalização de STX6 — o resultado mecanístico central do manuscrito — converte todas as posições eQTL de GRCh38 para GRCh37 somando uma constante de −30.864 bp. Até 2026-10-04 essa constante nunca tinha sido confrontada com uma fonte independente, e o docstring do script ainda afirmava que fora "validado por Ensembl MAP", o que era falso.
 

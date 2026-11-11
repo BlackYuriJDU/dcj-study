@@ -51,7 +51,7 @@ def main() -> None:
                             continue
                         resultados[nome].append(rec)
 
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     L = [
         "# Fine-mapping descritivo — loci do GWAS sCJD (sumstats 2020, GRCh37)",
         f"*`finemap_stx6.py` em {agora}. Sem LD individual: ranking regional, não credible set formal.*",

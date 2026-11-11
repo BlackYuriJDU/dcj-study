@@ -240,3 +240,22 @@ def test_relatorio_de_validacao_e_o_que_o_script_gera(tmp_path, monkeypatch, cap
     nome = "relatorio_validacao_coloc_R.md"
     assert _sem_data((tmp_path / nome).read_text(encoding="utf-8")) == _sem_data(
         (BASE / "pipeline" / "reports" / nome).read_text(encoding="utf-8"))
+
+
+def test_relatorio_da_meta_eqtl_e_o_que_o_script_gera(tmp_path, monkeypatch, capsys):
+    """Idem para a colocalização da meta-eQTL, sem o arquivo do GWAS: as 390
+    variantes versionadas em stx6_crosscheck_input.tsv servem de GWAS (são
+    exatamente as que casam, de modo que o balanço de variantes é o mesmo)."""
+    sys.path.insert(0, str(BASE / "pipeline" / "scripts"))
+    sys.path.insert(0, str(BASE / "tests"))
+    import coloc_meta_stx6 as META
+    from test_coloc_pipeline import mini_gwas
+    monkeypatch.setattr(META, "carregar_gwas_regiao", lambda: mini_gwas()[0])
+    monkeypatch.setattr(META, "REPORTS", tmp_path)
+    META.main()
+    capsys.readouterr()
+    nome = "relatorio_coloc_meta_stx6.md"
+    assert _sem_data((tmp_path / nome).read_text(encoding="utf-8")) == _sem_data(
+        (BASE / "pipeline" / "reports" / nome).read_text(encoding="utf-8")), (
+        f"{nome} está defasado em relação a coloc_meta_stx6.py — "
+        "rode `make relatorios-gwas`")

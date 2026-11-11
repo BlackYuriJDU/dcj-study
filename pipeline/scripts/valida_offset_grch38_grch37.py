@@ -136,7 +136,7 @@ def main() -> None:
         if arg.startswith("--n="):
             n_pontos = max(3, int(arg.split("=", 1)[1]))
 
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     const = OFFSET_CONSTANTE
 
     # --- 1. o offset é constante no span de STX6? ---
