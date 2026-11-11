@@ -20,24 +20,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from analise_gse160208 import extrair_tabela as ex160, welch  # noqa: E402
-from analise_gse140069 import carregar as car140  # noqa: E402
+from analise_gse160208 import (extrair_tabela as ex160, testar_fc,  # noqa: E402
+                               q_no_universo, classificar_amostras)
+from analise_gse140069 import analisar as analisar140  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
 FIGS = BASE / "reports" / "figuras"
 FIGS.mkdir(parents=True, exist_ok=True)
 
 AZUL, VERMELHO, CINZA = "#2563eb", "#dc2626", "#9ca3af"
-
-
-def fdr_bh(pares: list[tuple[str, float]]) -> dict[str, float]:
-    m = len(pares)
-    ordenado = sorted(pares, key=lambda t: t[1])
-    prev, out = 1.0, {}
-    for k in range(m - 1, -1, -1):
-        prev = min(prev, ordenado[k][1] * m / (k + 1))
-        out[ordenado[k][0]] = prev
-    return out
 
 
 def volcano(nome, pares_delta_p, qmap, rotulos, titulo):
@@ -48,9 +39,11 @@ def volcano(nome, pares_delta_p, qmap, rotulos, titulo):
         if q < 0.05:
             cor = VERMELHO if d > 0 else AZUL
         ax.scatter(d, -math.log10(max(p, 1e-300)), s=8, c=cor, alpha=0.75)
+    pmap = {g: p for g, _, p in pares_delta_p}
     for rot in rotulos:
         g, d = rot[0], rot[1]
-        ax.annotate(g, (d, -math.log10(qmap.get(g, 1e-300))),
+        # rótulo na altura do PONTO (p), não do q — antes ficava deslocado
+        ax.annotate(g, (d, -math.log10(max(pmap[g], 1e-300))),
                     fontsize=7, alpha=0.9)
     ax.axhline(-math.log10(0.05), ls="--", lw=0.7, c=CINZA)
     ax.set_xlabel("Δ média (CJD − controle)")
@@ -65,44 +58,25 @@ def volcano(nome, pares_delta_p, qmap, rotulos, titulo):
 
 def main() -> None:
     # --- Volcano GSE160208 -------------------------------------------------
+    # Mesmos testes e mesmo universo de FDR do relatório (genes estimáveis);
+    # os genes sem variância não têm p-valor e não entram na figura.
     amostras, genes, vals, meta, covs = ex160()
-    fc_cjd = [i for i, s in enumerate(amostras) if "CJD" in s and "_FC" in s]
-    fc_ct = [i for i, s in enumerate(amostras) if "CT" in s and "_FC" in s]
-    pares = []
-    for gi, g in enumerate(genes):
-        xs = [vals[gi][i] for i in fc_cjd]
-        ys = [vals[gi][i] for i in fc_ct]
-        mx = sum(xs) / len(xs)
-        my = sum(ys) / len(ys)
-        _, p = welch(xs, ys)
-        pares.append((g, mx - my, p))
-    qmap = fdr_bh([(g, p) for g, _, p in pares])
+    res160 = testar_fc(amostras, genes, vals)
+    _gr = classificar_amostras(amostras)
+    fc_cjd, fc_ct = _gr["CJD_FC"], _gr["CT_FC"]
+    q160 = q_no_universo(res160)
+    pares = [(r["gene"], r["delta"], r["p"]) for r in res160 if r["estimavel"]]
     topo_up = sorted((x for x in pares if x[1] > 0), key=lambda t: t[2])[:4]
     topo_dn = sorted((x for x in pares if x[1] < 0), key=lambda t: t[2])[:4]
-    volcano("volcano_gse160208.png", pares, qmap,
+    volcano("volcano_gse160208.png", pares, q160,
             [t[:3] for t in topo_up + topo_dn],
             "GSE160208 — Córtex frontal sCJD vs. controles (real)")
 
-    # --- Volcano GSE140069 (v3: p do modelo AJUSTADO idade+sexo+RIN) --------
-    from analise_gse140069 import carregar_covariatas, ols_grupo
-    mirnas, grupos, nomes, vals140 = car140()
-    covmap = carregar_covariatas()
-    icjd = [i for i, g in enumerate(grupos) if g != "Control"]
-    ict = [i for i, g in enumerate(grupos) if g == "Control"]
-    grupo = [1 if i in set(icjd) else 0 for i in range(len(grupos))]
-    sexo = [covmap.get(nomes[i], {}).get("sexo", 0) for i in range(len(grupos))]
-    idade = [covmap.get(nomes[i], {}).get("idade") for i in range(len(grupos))]
-    rin = [covmap.get(nomes[i], {}).get("rin") for i in range(len(grupos))]
-    ok = [i for i in range(len(grupos))
-          if idade[i] is not None and rin[i] is not None]
-    pares140 = []
-    for k, m in enumerate(mirnas):
-        linha = [math.log2(v + 1.0) for v in vals140[k]]  # mesma log2 da v3
-        bg, p, _ = ols_grupo(linha, [grupo[i] for i in ok],
-                             [sexo[i] for i in ok],
-                             [idade[i] for i in ok], [rin[i] for i in ok])
-        pares140.append((m, bg, p))
-    qmap140 = fdr_bh([(m, p) for m, _, p in pares140])
+    # --- Volcano GSE140069 (p do modelo AJUSTADO idade+sexo+RIN) -----------
+    # Resultados de analise_gse140069.analisar(): só testes estimáveis.
+    r140 = analisar140()
+    pares140 = [(m, r140["betaB"][m], r140["pB"][m]) for m in sorted(r140["pB"])]
+    qmap140 = r140["qB"]
     topo140 = sorted(pares140, key=lambda t: t[2])[:6]
     volcano("volcano_gse140069.png", pares140, qmap140,
             [(m, l) for m, l, _ in topo140],

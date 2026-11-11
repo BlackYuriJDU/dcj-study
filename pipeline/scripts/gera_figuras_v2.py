@@ -49,22 +49,34 @@ ax.set_xlabel("Genoma (GRCh37)"); ax.set_ylabel("−log10(p)")
 ax.set_title("GWAS sCJD — GCST90001389 (p<10⁻⁴ exibidos; QC independente)")
 fig.tight_layout(); fig.savefig(FIGS / "manhattan_gwas.png", dpi=150); plt.close(fig)
 
-# ---------- Forest: miRNAs (d bruto vs d ajustado) ----------
-dados = [  # (miRNA, d_bruto, d_ajustado) — relatorio_gse140069.md v3
-    ("hsa-miR-16-5p", -0.171, -0.146), ("hsa-miR-93-5p", -0.140, -0.048),
-    ("hsa-let-7i-5p", -0.260, -0.247), ("hsa-miR-106b-3p", -0.171, -0.146),
-    ("hsa-miR-500a-3p", -0.79, -1.20),
-]
+# ---------- Forest: miRNAs (efeito bruto vs ajustado) ----------
+# Calculado dos dados por analise_gse140069 (correção de 2026-11: a versão
+# anterior trazia os números digitados à mão, e eles não correspondiam aos
+# dados — ex.: d bruto de miR-16-5p é -1,04, não -0,17).
+#   d bruto     = d de Cohen em log2(x+1), sem covariáveis;
+#   d ajustado  = coeficiente de grupo do modelo ajustado (idade+sexo+RIN)
+#                 dividido pelo desvio-padrão residual desse modelo.
+import math as _math
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import analise_gse140069 as _m140  # noqa: E402
+_r = _m140.analisar()
+_d = _r["dados"]
+dados = []
+for _mi in ("hsa-miR-16-5p", "hsa-miR-93-5p", "hsa-let-7i-5p",
+            "hsa-miR-106b-3p", "hsa-miR-500a-3p"):
+    _k = _d["mirnas"].index(_mi)
+    _a = _r["desenho"].ajustar([_d["vals_log"][_k][i] for i in _d["ok_ajust"]])
+    dados.append((_mi, _r["dB"][_mi], _a.beta[1] / _math.sqrt(_a.s2)))
 y = list(range(len(dados)))
 fig, ax = plt.subplots(figsize=(8, 4.5))
-ax.hlines(y, [-1.4]*len(y), [0.4]*len(y), color="#e5e7eb", zorder=1)
+ax.hlines(y, [-1.5]*len(y), [0.4]*len(y), color="#e5e7eb", zorder=1)
 ax.axvline(0, c="#9ca3af", lw=1)
 ax.scatter([d[1] for d in dados], [i+0.15 for i in y], c="#dc2626", s=45,
            label="d bruto (não ajustado)", zorder=3)
 ax.scatter([d[2] for d in dados], [i-0.15 for i in y], c="#2563eb", s=45,
-           label="d ajustado (idade+sexo+RIN)", zorder=3)
+           label="efeito ajustado / DP residual (idade+sexo+RIN)", zorder=3)
 ax.set_yticks(y); ax.set_yticklabels([d[0] for d in dados])
-ax.invert_yaxis(); ax.set_xlabel("Cohen's d (CJD − controle)")
+ax.invert_yaxis(); ax.set_xlabel("efeito padronizado (CJD − controle), log2(x+1)")
 ax.set_title("miRNAs sanguíneos sCJD — efeito bruto vs ajustado")
 ax.legend(fontsize=8, loc="lower right")
 fig.tight_layout(); fig.savefig(FIGS / "forest_mirnas.png", dpi=150); plt.close(fig)

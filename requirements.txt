@@ -1,7 +1,21 @@
-# Núcleo estatístico: stdlib puro (validado contra âncoras R ≤1e-13).
-# Dependências externas apenas para figuras e acesso remoto tabix:
-matplotlib>=3.7
-pysam>=0.23
-# Desenvolvimento (validação de regressão contra stack padrão):
-pytest>=7.4
-scipy>=1.11
+# Dependências do dcj-study — FONTE ÚNICA, com versões fixadas.
+# Usada por `make install` (ambiente virtual .venv) e pelo CI
+# (.github/workflows/ci.yml). Testado com Python 3.13.
+#
+# O núcleo estatístico (pipeline/lib/) usa só a biblioteca padrão; os pacotes
+# abaixo são necessários para ler a planilha do GEO, gerar figuras e o PDF,
+# consultar o eQTL Catalogue e rodar os testes (que conferem o núcleo contra
+# numpy, scipy e statsmodels).
+
+# --- análise e relatórios ---
+openpyxl==3.1.5        # analise_gse140069.py (planilha de dados processados)
+matplotlib==3.11.2     # figuras
+reportlab==5.1.0       # gera_preprint_pdf.py
+pysam==0.24.1          # tabix remoto do eQTL Catalogue (só se um cache faltar,
+                       # e em registra_proveniencia_qtl.py --remoto)
+
+# --- testes (oráculos de referência; a suíte falha sem eles) ---
+pytest==9.2.0
+numpy==2.5.4
+scipy==1.18.1
+statsmodels==0.15.0

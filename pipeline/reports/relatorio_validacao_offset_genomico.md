@@ -1,15 +1,15 @@
 # Validação do offset GRCh38→GRCh37 usado na colocalização de STX6
-*`valida_offset_grch38_grch37.py` em 2026-10-04 15:45. Substitui a suposição de −30.864 bp por uma medição contra a API de assembly map do Ensembl.*
+*`valida_offset_grch38_grch37.py` em 2026-11-11 03:32. Substitui a suposição de −30.864 bp por uma medição contra a API de assembly map do Ensembl.*
 
 A colocalização de STX6 — o resultado mecanístico central do manuscrito — converte todas as posições eQTL de GRCh38 para GRCh37 somando uma constante de −30.864 bp. Até 2026-10-04 essa constante nunca tinha sido confrontada com uma fonte independente, e o docstring do script ainda afirmava que fora "validado por Ensembl MAP", o que era falso.
 
 ## 1. O offset é constante no span de STX6?
 
-Amostra de **9** pontos no span de STX6 em GRCh37 (chr1:180.941.861–180.992.047). convertidos pela API de assembly map do Ensembl.
+Amostra de **41** pontos no span de STX6 em GRCh37 (chr1:180.941.861–180.992.047). convertidos pela API de assembly map do Ensembl.
 
 | offset observado (bp) | pontos |
 |---|---|
-| +30,864 | 9 ← **offset do código** |
+| +30,864 | 41 ← **offset do código** |
 
 ## 2. As variantes da colocalização mudam de posição?
 
@@ -25,7 +25,7 @@ Para cada posição eQTL de STX6 (amostra espaçada dos 5 datasets), comparamos 
 
 ## 3. Veredito
 
-**O offset −30.864 bp está correto e é constante.** O Ensembl devolve exatamente esse delta em 9/9 pontos amostrados do span de STX6, e as variantes que casam com o GWAS sob a constante são exatamente as mesmas sob o mapeamento verificado (30/30).
+**O offset −30.864 bp está correto e é constante.** O Ensembl devolve exatamente esse delta em 41/41 pontos amostrados do span de STX6, e as variantes que casam com o GWAS sob a constante são exatamente as mesmas sob o mapeamento verificado (30/30).
 
 **Não há impacto no resultado da colocalização.** A limitação registrada no manuscrito é real como prudência editorial, mas hoje ela subdeclara: a conversão pode ser descrita como *verificada contra a API de assembly map do Ensembl*, o que é mais forte do que "não validada" e mais honesto do que o antigo "validado por Ensembl MAP" (que afirmava uma validação de cadeia inexistente).
 

@@ -1,4 +1,10 @@
 pipeline/data/GCST90001389_buildGRCh37.tsv.gz
+pipeline/data/*.part
+# Índices tabix que o htslib baixa para o diretório corrente ao consultar o
+# eQTL Catalogue, e cache descartável da checagem de offset (derivados)
+*.tbi
+pipeline/data/offset_ensembl_cache.json
+.pytest_cache/
 *.zip
 __pycache__/
 dist/

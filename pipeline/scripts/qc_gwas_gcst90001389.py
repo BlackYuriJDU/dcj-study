@@ -10,7 +10,7 @@ Estudo: consórcio MRC Prion Unit, Lancet Neurol 2020 (PMID 32949544),
 QC implementada (stdlib puro, streaming):
 1. Integridade: linhas totais/malformadas, contagem por cromossomo.
 2. Distribuições: MAF (effect_allele_frequency), p-values.
-3. Inflação genômica: lambda_GC = mediana(chi2)/0.4549, chi2=(beta/SE)^2.
+3. Inflação genômica: lambda_GC = mediana(chi2)/0.454936 (constante única em gwas_fonte), chi2=(beta/SE)^2.
 4. Hits genômicos: p < 5e-8 (limiar consagrado).
 5. Locus STX6 (candidato a replicação vs. Brain 2025): janela regional.
    STX6 GRCh37: chr1, ~159.9–160.2 Mb (verificar na saída).

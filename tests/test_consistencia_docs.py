@@ -96,8 +96,13 @@ def test_offset_genomico_verificado_sem_exagero():
 
     # (4) a medição existe e registra o veredito
     rel = ler("pipeline/reports/relatorio_validacao_offset_genomico.md")
-    for marca in ("+30,864", "9/9", "30/30"):
+    for marca in ("+30,864", "30/30"):
         assert marca in rel, f"marcador da validação ausente no relatório: {marca}"
+    # todos os pontos amostrados concordam (n/n), qualquer que seja o n usado
+    # na execução (o padrão do script é 41; a versão de 2026-10-04 usou 9)
+    m = re.search(r"em (\d+)/(\d+) pontos amostrados", rel)
+    assert m and m.group(1) == m.group(2) and int(m.group(1)) >= 9, \
+        "relatório do offset não registra concordância em todos os pontos"
 
     # (5) o manuscrito reflete o estado verificado
     assert "verified this offset against the Ensembl" in ms, \
