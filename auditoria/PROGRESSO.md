@@ -232,3 +232,41 @@ a frase "release v1.0.0-preprint-clean" continuam os da v0.4 (publicar é
 decisão do autor).
 
 Comprovação: `python -m pytest tests/ -q -rs` → 196 passed, 0 pulados.
+
+### Resultado da 2ª regeneração a partir do clone limpo (R6) ✅
+
+Clone novo em outro diretório, no commit `f39414d`, `.venv` próprio, cache do
+fine-mapping vazio (`DCJ_CACHE` apontando para uma pasta nova):
+
+| Passo | Resultado |
+|---|---|
+| `make install` | ok |
+| `make test` | 185 passed, 0 pulados |
+| `make dados-gwas` | conexão caiu uma vez; retomou; MD5 `071790d8…` confere (197,5 MB) |
+| `make conferir-dados` | GWAS ok; 9 caches com SHA-256 e nº de linhas conferindo |
+| `make relatorios` (offline + GWAS + rede) | todos os scripts terminaram sem erro; Ensembl e NCBI consultados do zero |
+| `make test` depois | 185 passed |
+| `git status` depois | 3 relatórios diferentes; **nenhuma figura mudou** (PNG idênticos byte a byte) |
+
+As três diferenças: carimbo de hora em `relatorio_clumping_descoberta.md` e
+`relatorio_validacao_offset_genomico.md` (os scripts gravavam hora e minuto) e
+o cabeçalho de `relatorio_coloc_meta_stx6.md` (o versionado tinha sido gerado
+antes de um ajuste de pontuação no script). As três foram corrigidas no commit
+`9518dc4`: datas sem hora, relatórios regenerados, e um teste novo que roda
+`coloc_meta_stx6.py` e exige saída igual ao relatório versionado.
+
+Não coberto por essa regeneração: `make pdf` (feito à parte, na onda 6), as
+simulações e os scripts do caso de referência (fora do escopo) e o script R
+(rodado à parte com R 4.5.3 / coloc 5.2.3 num ambiente temporário).
+
+## Decisão 9 — publicação da branch
+
+O prompt proíbe `git push`; o ambiente da sessão (contêiner efêmero) cobrou o
+push. Perguntei ao autor, que respondeu "os dois": push **apenas** na branch
+`claude/new-session-ukxwtl` e entrega de um git bundle. Sem PR, sem tag, sem
+release, sem tocar em `main`.
+
+## Onda 7 — Verificação independente (em andamento)
+
+Revisor de contexto novo, com um clone limpo e só as seções 2 e 3 do dossiê.
+Foi interrompido uma vez por limite de uso da conta e retomado.
