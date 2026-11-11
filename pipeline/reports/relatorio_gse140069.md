@@ -12,7 +12,7 @@
 - **74 miRNAs não são estimáveis** (resposta constante em todas as amostras). Não recebem p-valor e não entram no FDR.
 - **Universo declarado: 865 testes estimáveis** (A e B). É o universo usado nas contagens principais.
 - Universo legado (939, usado até a v3): todos os miRNAs medidos, com os não estimáveis contando como testes que nunca rejeitam. É válido, porém mais conservador; fica na última coluna para comparação com os números já publicados.
-- Na v3, os miRNAs constantes recebiam do solver antigo um "p" que era ruído de arredondamento (0,0203 numa execução; 5,5×10⁻⁷ com os mesmos números em outro tipo numérico). O resultado publicado não mudava por acaso, não por construção.
+- Na v3, os miRNAs constantes recebiam do solver antigo um "p" que era ruído de arredondamento: 0,0203 com números do tipo float do Python e da ordem de 10⁻⁶ a 10⁻⁷ com os mesmos números em numpy.float64 (o valor exato varia com o ambiente). O resultado publicado só não mudava porque a execução caiu do lado inofensivo.
 
 ## A vs. B
 

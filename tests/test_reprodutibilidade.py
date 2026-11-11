@@ -196,3 +196,47 @@ def test_makefile_tem_alvo_que_regenera_todos_os_relatorios():
     assert esperados <= chamados, sorted(esperados - chamados)
     for s in chamados:
         assert (BASE / "pipeline" / "scripts" / s).exists(), s
+
+
+# ----------------------------------- relatórios versionados × scripts (R6)
+def _sem_data(txt):
+    return re.sub(r"\b20\d\d-\d\d-\d\d\b", "<data>", txt)
+
+
+@pytest.mark.parametrize("modulo,relatorio", [
+    ("analise_gse160208", "relatorio_gse160208.md"),
+    ("analise_gse140069", "relatorio_gse140069.md"),
+    ("analise_gse140069_idade", "relatorio_gse140069_idade.md"),
+    ("analise_integrada_cerebro_sangue", "relatorio_integracao_cerebro_sangue.md"),
+])
+def test_relatorio_versionado_e_o_que_o_script_gera(modulo, relatorio, tmp_path,
+                                                    monkeypatch, capsys):
+    """Roda o script e compara a saída, linha a linha, com o relatório
+    versionado (ignorando só a data). Pega relatório editado à mão depois de
+    gerado e relatório esquecido depois de mudar o script — os dois casos
+    aconteceram neste repositório."""
+    import importlib
+    sys.path.insert(0, str(BASE / "pipeline" / "scripts"))
+    mod = importlib.import_module(modulo)
+    monkeypatch.setattr(mod, "REPORTS", tmp_path)
+    mod.main()
+    capsys.readouterr()
+    gerado = _sem_data((tmp_path / relatorio).read_text(encoding="utf-8"))
+    versionado = _sem_data((BASE / "pipeline" / "reports" / relatorio).read_text(
+        encoding="utf-8"))
+    assert gerado == versionado, (
+        f"{relatorio} está defasado em relação a {modulo}.py — "
+        "rode `make relatorios-offline`")
+
+
+def test_relatorio_de_validacao_e_o_que_o_script_gera(tmp_path, monkeypatch, capsys):
+    """Idem para a validação da colocalização (modo sem GWAS e sem R)."""
+    sys.path.insert(0, str(BASE / "pipeline" / "scripts"))
+    import crosscheck_coloc_R as X
+    monkeypatch.setattr(X, "REPORTS_SAIDA", tmp_path, raising=False)
+    monkeypatch.setattr(sys, "argv", ["crosscheck_coloc_R.py", "--so-oraculo"])
+    X.main()
+    capsys.readouterr()
+    nome = "relatorio_validacao_coloc_R.md"
+    assert _sem_data((tmp_path / nome).read_text(encoding="utf-8")) == _sem_data(
+        (BASE / "pipeline" / "reports" / nome).read_text(encoding="utf-8"))

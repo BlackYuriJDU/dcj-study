@@ -39,6 +39,7 @@ SAIDA_R = BASE / "data" / "stx6_crosscheck_colocR_output.tsv"
 FIX_ENT = RAIZ / "tests" / "fixtures" / "stx6_crosscheck_input_v04.tsv"
 FIX_R = RAIZ / "tests" / "fixtures" / "stx6_crosscheck_colocR_output_v04.tsv"
 REPORTS = BASE / "reports"
+REPORTS_SAIDA = REPORTS          # onde o relatório é gravado (os testes trocam)
 COLUNAS = ["pos_b37", "ref", "alt", "beta_gwas", "se_gwas", "p_gwas",
            "beta_eqtl_meta", "se_eqtl_meta", "p_eqtl_meta", "n_datasets", "maf"]
 
@@ -217,7 +218,7 @@ def main() -> None:
           "- `python3 -m pytest tests/test_coloc_abf.py -q`",
           "- Opcional, com R e `coloc` instalados: "
           "`Rscript pipeline/scripts/coloc_crosscheck_R.R`", ""]
-    destino = REPORTS / "relatorio_validacao_coloc_R.md"
+    destino = REPORTS_SAIDA / "relatorio_validacao_coloc_R.md"
     destino.write_text("\n".join(L), encoding="utf-8")
     print(f"[ok] {destino}")
     print(f"     oráculo: diferença máxima {dif_f:.2e}; H4 (v0.4) = {pf[4]:.6f}; "
