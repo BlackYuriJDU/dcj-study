@@ -266,7 +266,58 @@ push. Perguntei ao autor, que respondeu "os dois": push **apenas** na branch
 `claude/new-session-ukxwtl` e entrega de um git bundle. Sem PR, sem tag, sem
 release, sem tocar em `main`.
 
-## Onda 7 — Verificação independente (em andamento)
+## Onda 7 — Verificação ✅ (autoconferência; revisor independente não concluiu)
 
-Revisor de contexto novo, com um clone limpo e só as seções 2 e 3 do dossiê.
-Foi interrompido uma vez por limite de uso da conta e retomado.
+O revisor de contexto novo (subagente, com um clone limpo e só as seções 2 e 3
+do dossiê) foi interrompido duas vezes por limite de uso da conta, a segunda
+logo depois de começar a reprodução da colocalização. Não devolveu relatório.
+Conforme o plano ("sem subagentes, faça a conferência você mesmo a partir de
+um clone limpo"), a conferência foi feita pelo autor da correção. **É mais
+fraca que a de um terceiro: quem corrigiu herda os próprios pontos cegos.**
+
+Feito, em um clone novo do commit `1a214a8`:
+
+1. Suíte: `python -m pytest tests/ -q -rs` → 197 passed, 0 pulados.
+2. Mutações (18, uma de cada vez, numa cópia do clone; todas PEGAS):
+   H4 × p1·p2·p12; ABF com √r; W quantitativo 0,0016; H4/(H3+H4) como H4/H3;
+   meta por posição; GWAS sem inversão de sinal; resposta constante tratada
+   como estimável; universo do FDR com não estimáveis (modelo ajustado e
+   Welch); sexo inesperado virando 0; ordem dos filtros trocada; universo
+   padrão = painel; K = todos os alvos do genoma; alvo não humano aceito; não
+   testáveis no BH; cauda errada do hipergeométrico; manuscrito com H4 = 0,000;
+   relatório da meta editado à mão (2.156 → 2.182).
+3. Recálculo com código separado (numpy/scipy/statsmodels, sem importar nada
+   do projeto): todas as âncoras das seções 2.1, 2.4, 2.5 e 2.6 coincidem com
+   o que o repositório produz — H4 0,979605 (v0.4 e atual), p12 5e-6/1e-6 →
+   0,960025/0,827677, W 0,0016…0,1 → 0,978676…0,979611, topo de SNP.PP.H4,
+   conjunto de 95% = 17, direção 348; miRNA 84/69 (939) e 89/73 (865), ajustado
+   1 (β −7,9358, p 8,03e-6, q 0,00754), filtrado 5, 74 constantes, posto 5,
+   condição 471; cérebro 437 (314/123), 441 (315/126), Student 410, 183/184
+   com CCL4 na fronteira, 58 sem variância; integração antes/depois.
+4. `coloc.abf` real (R 4.5.3, coloc 5.2.3) reexecutado no clone: saída idêntica,
+   byte a byte, à versionada; diferença máxima por variante contra o código do
+   projeto 1,1e-16.
+5. Dados de origem e `caso_referencia/` sem alteração em relação a `e0765256`
+   (`git diff --stat e0765256 -- caso_referencia pipeline/data` só lista a
+   proveniência nova e os dois arquivos derivados da validação).
+6. Guardas: os 5 de privacidade e os 8 de integridade de citação/DOI são
+   idênticos, função a função, aos do commit-base. Removidos de
+   `test_consistencia_docs.py`: só os quatro que o dossiê manda substituir
+   (T1, T3). Alterado: `test_offset_genomico_verificado_sem_exagero` (aceita
+   n/n pontos em vez de fixar "9/9").
+7. Fórmula antiga: `grep` em `pipeline/` só a encontra em dois comentários que
+   descrevem o erro; uma única definição de `combinar`/`log_abf`
+   (`pipeline/lib/coloc_abf.py`).
+8. Valores "antes" do `CORRECOES.md` conferidos contra os relatórios do
+   commit-base.
+
+Não verificado nesta onda: leitura crítica do §4.7 por terceiro; site
+renderizado no navegador (só as cadeias de texto foram conferidas por teste).
+
+## Estado final
+
+- Branch `claude/new-session-ukxwtl` (rótulo local `correcao/auditoria-2026-11`
+  no mesmo commit), publicada só nessa branch por autorização do autor.
+- Pendente de decisão do autor: mesclar em `main`, nova versão no Zenodo,
+  deploy do site, submissão do preprint v0.5, revisão do §4.7 por alguém de
+  genética estatística.

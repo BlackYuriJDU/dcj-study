@@ -58,7 +58,7 @@ números, universos de teste, redação e infraestrutura.
 | Alvos validados (miR-16-5p / miR-93-5p) | 48 / 16 (com 1 de rato e 1 de camundongo) | 47 / 15 | I2 |
 | Testes no FDR da integração | 5 (dois com p = 1 sem alvo) | 3 | I3 |
 | Checagem do offset no Ensembl | 9/9 pontos | 41/41 pontos (reexecutada) | — |
-| Suíte de testes | 37 | 201 | T1, T2 |
+| Suíte de testes | 37 | 197 | T1, T2 |
 
 Reproduzidos sem mudança, com o GWAS real: 6.314.492 variantes, 0 linhas
 malformadas, 41 hits p<5×10⁻⁸, lead de STX6 chr1:180.961.245 (p = 7,51×10⁻⁹),
@@ -238,6 +238,12 @@ PDF regenerado. **D3 (corrigido).** λGC = 1,0587 nos dois relatórios.
   E-utilities no momento da execução; não há cópia versionada dessas respostas.
 - **Revisão científica do §4.7.** O texto está coerente com os números; não foi
   lido por alguém de genética estatística.
+- **Verificação por revisor independente.** O revisor de contexto novo previsto
+  no plano foi interrompido duas vezes por limite de uso da conta e não
+  concluiu. A conferência final foi feita pelo próprio autor da correção, a
+  partir de um clone limpo (18 mutações, todas pegas pela suíte; recálculo com
+  código separado; `coloc.abf` real). É uma verificação mais fraca que a de um
+  terceiro; ver `auditoria/PROGRESSO.md`, onda 7.
 - **Versão publicada.** O registro no Zenodo e o site publicado continuam com a
   conclusão da v0.4 até uma nova versão ser depositada.
 
