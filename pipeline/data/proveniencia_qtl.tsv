@@ -1,0 +1,27 @@
+# Proveniência dos caches de eQTL/sQTL de STX6 (pipeline/data/eqtl_*_stx6.tsv e sqtl_*_stx6.tsv)
+# fonte: eQTL Catalogue (https://www.ebi.ac.uk/eqtl/), sumstats em https://ftp.ebi.ac.uk/pub/databases/spot/eQTL/sumstats/
+# release: r8
+# metadata_repositorio: https://github.com/eQTL-Catalogue/eQTL-Catalogue-resources
+# metadata_arquivo: data_tables/dataset_metadata_r8.tsv
+# metadata_commit: 7a5b65b
+# metadata_data_do_commit: 2026-10-30 (data informada pela auditoria; o conteúdo do arquivo nesse commit foi conferido em 2026-11-10)
+# n_amostras: coluna sample_size da metadata acima (conferida em 2026-11-10)
+# janela_b38: chr1:180930000-181132000 (cobre a janela de análise GRCh37 chr1:180900000-181100000 com offset -30864)
+# filtro_ge: molecular_trait_id == ENSG00000135823 (STX6), arquivo <dataset>.all.tsv.gz
+# filtro_leafcutter: todos os clusters com pares cis significativos na janela, arquivo <dataset>.cc.tsv.gz
+# data_obtencao_ge: 2026-08-26 (data do commit 16c001d que versionou os caches; a data exata da consulta não foi registrada à época)
+# data_obtencao_leafcutter: 2026-08-29 (data do commit 81f5019; idem)
+# verificacao_remota: 2026-11-10 — cada cache é idêntico, byte a byte, ao resultado da mesma consulta sobre os arquivos então publicados (registra_proveniencia_qtl.py --remoto)
+# colunas_cache_ge: pos_b38, ref, alt, rsid, pvalue, beta, se, maf (efeito = ALT)
+# colunas_cache_leafcutter: pos_b38, ref, alt, rsid, pvalue, beta, se, molecular_trait_id, gene_id
+study_id	dataset_id	estudo	rotulo	tecido	quant_method	n_amostras	arquivo	linhas	sha256
+QTS000008	QTD000075	CommonMind	CommonMind DLPFC	brain (DLPFC)	ge	586	eqtl_QTD000075_stx6.tsv	887	a8cd68145f3e8d3edd5dd8a919bf1734c219923e1a54d3dab1a5eb3041dfcb6a
+QTS000025	QTD000434	ROSMAP	ROSMAP DLPFC	brain (DLPFC)	ge	560	eqtl_QTD000434_stx6.tsv	711	5f38846a638f26e5b940fd4bdf3b55f356417f29a1f0bf5af1d901a3d6133cbf
+QTS000005	QTD000051	BrainSeq	BrainSeq DLPFC	brain (DLPFC)	ge	479	eqtl_QTD000051_stx6.tsv	1167	333e375c795e6574d66e49b69392dc8b47ea50d011042df3c29b7a0c57322aa4
+QTS000015	QTD000176	GTEx_v10	GTEx_v10 DLPFC	brain (DLPFC), sample_group brain_frontal_cortex	ge	268	eqtl_QTD000176_stx6.tsv	582	ce677d14143a4f786de07da1fb649278615f1c5bb7364bce6d5c8c9b95b741b4
+QTS000015	QTD000166	GTEx_v10	GTEx_v10 cerebelo	brain (cerebellum)	ge	263	eqtl_QTD000166_stx6.tsv	606	684c53def52e24653616ab8598e5a2e102afde173878c114fd2334ee0fcd4dfb
+QTS000008	QTD000079	CommonMind	CommonMind DLPFC	brain (DLPFC)	leafcutter	586	sqtl_QTD000079_stx6.tsv	887	4e1220cd8888adfb2154042567a398dd251ae89227b8392cae382d95034aeed3
+QTS000025	QTD000438	ROSMAP	ROSMAP DLPFC	brain (DLPFC)	leafcutter	560	sqtl_QTD000438_stx6.tsv	711	45581dbac9d326d9fe247ebdf772fcc8e2d39f319d0b13c6e3267ac54b7f2ad6
+QTS000005	QTD000055	BrainSeq	BrainSeq DLPFC	brain (DLPFC)	leafcutter	479	sqtl_QTD000055_stx6.tsv	2334	2a251d07ad248a335d6c23afc63f7cb85880c5c04984fa50b5b8c7dde6f74cac
+QTS000015	QTD000180	GTEx_v10	GTEx_v10 DLPFC	brain (DLPFC), sample_group brain_frontal_cortex	leafcutter	268	sqtl_QTD000180_stx6.tsv	0	-
+QTS000015	QTD000170	GTEx_v10	GTEx_v10 cerebelo	brain (cerebellum)	leafcutter	263	sqtl_QTD000170_stx6.tsv	1212	e69ff4355b1915b214214fbcb7a5e9d8c6eb16abab8aa45658f2434d01757b54

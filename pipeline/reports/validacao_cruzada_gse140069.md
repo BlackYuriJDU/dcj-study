@@ -106,3 +106,10 @@ Estado entregue e verificado por re-execução em 29/08:
 - Números finais: **84** significativos não-ajustado (FDR<0.05) → **69** com filtro de detecção → **1** após ajuste de covariáveis → **5** no universo filtrado (n=269). Núcleo do artigo: direção ↓ preservada nos 4; apenas **miR-93-5p** sobrevive ao FDR no universo filtrado (q=0.048).
 - Re-execução em 29/08 reproduz o relatório byte-a-byte (única diferença: timestamp) e o `volcano_gse140069.png` é md5-idêntico à regeneração (c92c5b029fc2007d33543d85c73ecb32) — figura gerada pela mesma lógica v3.
 - Os itens 1–4 da seção (iv) acima foram executados; o item 5 (nota de limitação) permanece correto como escrito.
+
+## Atualização de 2026-11 (script v4, correção da auditoria)
+
+- `analise_gse140069.py` **v4**: mesma análise da v3, com regressão por QR, testes não estimáveis marcados e universo do FDR declarado. 74 dos 939 miRNAs são constantes em todas as amostras e não têm teste; o universo declarado passa a ser o dos 865 estimáveis.
+- Números vigentes (universo de 865; entre parênteses, o universo antigo de 939, que é o dos números acima): **89** (84) significativos sem ajuste → **73** (69) com filtro de detecção → **1** (1) após ajuste de covariáveis → **5** no universo filtrado (n=269).
+- A afirmação de reprodução "byte a byte" acima vale para a v3 de 29/08; o relatório atual é o da v4 e é conferido contra a saída do script por `tests/test_reprodutibilidade.py`.
+- O sobrevivente do modelo ajustado, hsa-miR-500a-3p, é um efeito do tipo detectado/não detectado (acima do piso em 27 de 57 casos e 46 de 48 controles).

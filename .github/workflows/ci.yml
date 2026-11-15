@@ -13,13 +13,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Instalar dependências
-        # scipy/statsmodels NÃO são opcionais: test_stats_core.py usa-os como
-        # oráculo de referência para welch/tcdf_p/fdr_bh/cohen_d. Sem eles o
-        # pytest importorskip e o núcleo estatístico inteiro fica sem gate.
-        run: pip install matplotlib openpyxl pytest numpy scipy statsmodels
-      - name: Testes estatísticos + consistência relatório↔script↔figuras
+        # Fonte única: requirements.txt, com versões fixadas (a mesma lista do
+        # `make install`). numpy/scipy/statsmodels NÃO são opcionais: os testes
+        # os usam como oráculo de referência.
+        run: pip install -r requirements.txt
+      - name: Testes (recalculam os resultados centrais) + consistência relatório↔script
         run: python -m pytest tests/ -q -rs
       - name: Nenhum teste pode ser pulado
         # -q esconde skips. Um skip aqui significa que um gate sumiu; falhar é

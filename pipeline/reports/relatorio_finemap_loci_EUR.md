@@ -1,5 +1,5 @@
 # Fine-mapping v2 — LD real (Ensembl/1000G phase 3) + credible sets descritivos
-*`finemap_ld.py` em 2026-08-29 15:38. População: 1000GENOMES:phase_3:EUR. Método: ABF de Wakefield (W=0.04) + agrupamento por r²≥0.8 ao lead. Approximate — sem modelo conjunto (SuSiE exigiria genótipos individuais).*
+*`finemap_ld.py` em 2026-11-11. População: 1000GENOMES:phase_3:EUR. Método: ABF de Wakefield (W=0.04) + agrupamento por r²≥0.8 ao lead. Approximate — sem modelo conjunto (SuSiE exigiria genótipos individuais).*
 
 ## Locus STX6 — lead chr1:180,961,245 p=7.51e-09 · âncora LD: rs11586493 (efetivo: rs11586493)
 - Variantes na janela: 162 · pares LD da âncora: 308

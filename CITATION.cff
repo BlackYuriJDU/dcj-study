@@ -11,7 +11,7 @@ version: v1.0.0-preprint-clean
 date-released: "2026-10-06"
 license: MIT
 repository-code: "https://github.com/BlackYuriJDU/dcj-study"
-abstract: "End-to-end independent reanalysis of the largest sCJD GWAS (GCST90001389) from summary statistics: all three published loci replicate; cluster-level fine-mapping with 1000G LD via Ensembl REST; stratified genomic-inflation diagnostics; exact replication of brain-expression signature (GSE160208); covariate-adjusted reassessment of blood miRNA signature (GSE140069). Pure standard-library Python."
+abstract: "End-to-end independent reanalysis of the largest sCJD GWAS (GCST90001389) from summary statistics: all three published loci replicate; cluster-level fine-mapping with 1000G LD via Ensembl REST; stratified genomic-inflation diagnostics; colocalization of the STX6 signal with brain STX6 expression (posterior 0.98 for a shared causal variant under default coloc priors; corrected in November 2026); reproduction of the published brain-expression DEG count (GSE160208) under a stated filter order; covariate-adjusted reassessment of blood miRNA signature (GSE140069). Statistical core in standard-library Python, tested against coloc, SciPy and statsmodels."
 keywords:
   - prion disease
   - Creutzfeldt-Jakob

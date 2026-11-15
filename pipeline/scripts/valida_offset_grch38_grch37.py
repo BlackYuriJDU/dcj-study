@@ -115,7 +115,9 @@ def gwas_variantes():
     """Posições do GWAS na janela (GRCh37), cacheadas em memória."""
     import gzip as _gz
     out = set()
-    with _gz.open(DATA / "GCST90001389_buildGRCh37.tsv.gz", "rt") as fh:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+    from gwas_fonte import exigir_gwas
+    with _gz.open(exigir_gwas(), "rt") as fh:
         hdr = fh.readline().rstrip("\n").split("\t")
         ci, pi = hdr.index("chromosome"), hdr.index("base_pair_location")
         for linha in fh:
@@ -134,7 +136,7 @@ def main() -> None:
         if arg.startswith("--n="):
             n_pontos = max(3, int(arg.split("=", 1)[1]))
 
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     const = OFFSET_CONSTANTE
 
     # --- 1. o offset é constante no span de STX6? ---

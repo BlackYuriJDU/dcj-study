@@ -1,8 +1,8 @@
 # Relatório — Análise de dados REAIS: GSE160208
-*Gerado por `analise_gse160208.py` em 2026-08-24 12:52.*
+*Gerado por `analise_gse160208.py` em 2026-11-11.*
 
 - Dataset: Gene expression in the brain of sporadic Creutzfeldt-Jakob disease patients (CJD), and normal controls (CT)
-- Fonte: GEO/NCBI GSE160208 · PMID 33375642 · Univ. Copenhagen (dados públicos anonimizados) · Areškevičiūtė A., Litman T. et al. (1ª autora: Areškevičiūtė)
+- Fonte: GEO/NCBI GSE160208 · PMID 33375642 · Univ. Copenhagen (dados públicos anonimizados)
 - Amostras totais processadas: **47** · Genes no painel: **800**
 
 ## Composição das amostras
@@ -19,10 +19,6 @@
 
 ## Estratificação por subtipo — córtex frontal CJD
 - Grupos CJD-FC por subtipo: MM1: 6, MM1+2: 1, MV1: 2, MV2: 1, VV2: 4
-
-> **Nota**: estratificação por subtipo é EXTENSÃO EXPLORATÓRIA NOSSA (n=6 no MM1-FC);
-> o artigo original não a realiza. Coerente com Llorens et al., citado na discussão deles.
-> Descriativa, não inferencial (n pequeno).
 
 ### Subgrupo MM1 (n=6) vs. controles — top 5 up/down
 
@@ -73,21 +69,46 @@
 - PRNP presente no painel: sim → Δ(CJD−CT) = -0.42
 
 ## Estatística inferencial (Welch + BH-FDR, córtex frontal)
-- Genes testados: 800 · Significativos com FDR<0.05: **437**
 
-> **Reconciliação com o artigo original** (validação cruzada de 2026-08-24, ver
-> `validacao_cruzada_gse160208_artigo_original.md`): os autores reportam **184 DEGs**
-> porque aplicam filtro adicional de magnitude (|log2FC| > 1) e limiar de FDR mais
-> frouxo (q≈0.06). Aplicando o critério EXATO deles aos nossos dados: **184 DEGs —
-> número idêntico ao publicado** (única divergência: CCL4, caso-limite na borda do corte).
-> Nossos 437 incluem modulações finas (|Δ| ≤ 1) que o filtro de magnitude deles exclui.
-> Top 10 up/down nossos = top 10 deles, NA MESMA ORDEM; correlação de magnitudes r = 1.000.
+- Genes no painel: 800 · **não estimáveis: 58** (mesmo valor em todas as amostras do córtex frontal — o piso do ensaio; sem variância não há teste nem p-valor).
+- **Universo declarado do FDR: 742 genes estimáveis.** Significativos com FDR<0.05: **441** (315 ↑, 126 ↓).
+- Universo do painel inteiro (800 genes, com os não estimáveis contando como testes que nunca rejeitam; usado até a v0.4): **437** (314 ↑, 123 ↓). A diferença entre as duas contagens é só o tamanho do universo.
 
-## Nota de honestidade científica
+| Gene | p | q(FDR) |
+|---|---|---|
+| DLG4 | 1.03e-07 | 3.11e-05 |
+| EHMT2 | 1.53e-07 | 3.11e-05 |
+| OSMR | 1.67e-07 | 3.11e-05 |
+| MYD88 | 1.68e-07 | 3.11e-05 |
+| DLX1 | 3.46e-07 | 5.13e-05 |
+| TRAF3 | 4.40e-07 | 5.39e-05 |
+| TLR2 | 5.09e-07 | 5.39e-05 |
+| CSF1 | 7.95e-07 | 5.63e-05 |
+| C1QA | 8.57e-07 | 5.63e-05 |
+| IFITM3 | 9.72e-07 | 5.63e-05 |
+| PMP22 | 1.05e-06 | 5.63e-05 |
+| SPP1 | 1.05e-06 | 5.63e-05 |
+| PLXDC2 | 1.06e-06 | 5.63e-05 |
+| KIT | 1.08e-06 | 5.63e-05 |
+| SERPINA3 | 1.14e-06 | 5.63e-05 |
+
+## Critério do artigo original: 184 genes, e do que esse número depende
+
+O artigo (Areškevičiūtė et al. 2020) reporta **184** genes diferencialmente expressos no córtex frontal, com "p<0.05, q=0.06, >2-fold change" (suplemento S1b), calculados no Qlucore. Aplicando p < 0,05, q ≤ 0,06 e |Δlog2| > 1 aos dados depositados, a contagem depende da ordem dos filtros e do universo do FDR:
+
+| Ordem dos filtros | Universo do FDR | DEGs |
+|---|---|---|
+| FDR no universo inteiro, depois magnitude | 742 estimáveis | **183** |
+| FDR no universo inteiro, depois magnitude | 800 do painel | **183** |
+| magnitude primeiro, depois FDR só nos que passaram | 185 genes com \|Δlog2\| > 1 | **184** |
+| só p < 0,05 e \|Δlog2\| > 1 (sem exigir q) | — | **184** |
+
+Leitura: a contagem de 184 é reproduzida quando o filtro de magnitude vem antes do FDR (ou sem exigir q); com o FDR calculado no universo inteiro, o resultado é 183. O gene que separa as duas contagens é CCL4, um caso-limite nos três cortes. Isto reproduz a CONTAGEM do artigo sob uma escolha declarada de ordem de filtros; não é uma réplica exata do procedimento dos autores: os q-valores do Qlucore não foram reproduzidos, e p e log2FC são próximos dos oficiais, não idênticos por construção. A comparação gene a gene com a lista do suplemento S1b está em `validacao_cruzada_gse160208_artigo_original.md`; o suplemento não é versionado neste repositório, e essa comparação não foi refeita na correção de 2026-11.
+A ordem padrão deste script é `fdr_no_universo`, no universo `estimaveis`.
+
+## Notas
 - Welch t-test bicaudal implementado em stdlib; FDR Benjamini–Hochberg.
 - Painel dirigido (800 genes neuroinflamatórios), não transcriptoma total.
 - Sem correção para covariáveis (idade, PMI) — os metadados brutos não as trazem.
-- **"Perda neuronal" é INFERÊNCIA NOSSA** (apoiada nos genes down neurônio-específicos
-  SLC17A6/NEFL/BDNF/TUBB3/GRIN2B), não conclusão do artigo original — que foca em
-  regionalidade, microglia e células dendríticas. Ler como "padrão consistente com
-  disfunção neuronal", não como demonstração histológica.
+- **"Perda neuronal" é inferência deste projeto** (apoiada nos genes ↓ neurônio-específicos SLC17A6/NEFL/BDNF/TUBB3/GRIN2B), não conclusão do artigo original, que foca em regionalidade, microglia e células dendríticas. Ler como "padrão consistente com disfunção neuronal", não como demonstração histológica.
+- Genes não estimáveis (variância nula no córtex frontal): BIK, BLK, C6, CCL7, CCR2, CCR5, CD200R, CD244, CD300LF, CD3D, CD3E, CD3G, CD69, CD70, CEACAM3, CPA3, CRYBA4, CSF2RB, CTSE, CTSW, CXCL10, CXCL9, DUOXA1, EOMES, FCRLA, FCRLB, GZMA, GZMB, HCAR2, IL1A, IL1RN, IL21R, IL27, IRF4, KIR3DL1, KLRD1, LCN2, LY9, MARCO, MMP12, MS4A1, MS4A2, NCR1, RAD51, S1PR4, SH2D1A, SLAMF9, SPIB, TBX21, TCL1A, TNFRSF17, TNFRSF4, TP73, TRAT1, TTR, UTY, XCL1, ZBP1.

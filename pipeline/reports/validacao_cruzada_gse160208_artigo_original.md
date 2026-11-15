@@ -3,8 +3,10 @@
 
 ## 0. Veredicto executivo
 
-**Nossa análise é CONSISTENTE com a publicação original — validada com precisão notável.**
-Réplica ponto a ponto: correlação de Pearson **r = 1.000** entre nossas diferenças de médias (log2) e os Log2FC oficiais; 183 dos 184 DEGs oficiais estão dentro dos nossos significativos; direção concordante em 183/183; nossos top 20 genes (up e down) são exatamente os top 20 da lista oficial, na mesma ordem. Aplicando o critério exato dos autores aos nossos dados brutos obtemos **184 DEGs no córtex frontal — o número exato publicado**.
+**A análise é consistente com a publicação original.**
+Correlação de Pearson **r = 1.000** entre as diferenças de médias (log2) deste projeto e os Log2FC oficiais; 183 dos 184 DEGs oficiais estão entre os significativos deste projeto; direção concordante em 183/183; os top 20 genes (up e down) são os top 20 da lista oficial, na mesma ordem. Aplicando p < 0,05, q ≤ 0,06 e |Δlog2| > 1 aos dados depositados, a **contagem** de 184 DEGs do artigo é reproduzida quando o filtro de magnitude é aplicado antes do FDR; com o FDR calculado no universo inteiro, a contagem é 183 (CCL4 é o caso-limite).
+
+> **Nota da correção de 2026-11 (achados E1 e E2 da auditoria).** Versões anteriores deste documento falavam em "réplica ponto a ponto" e em "critério exato dos autores". Isso superdeclarava: a contagem depende da ordem dos filtros e do universo do FDR, os q-valores do Qlucore não foram reproduzidos, e p e log2FC são próximos dos oficiais, não idênticos. O que se sustenta é a reprodução da contagem (e, segundo a comparação de 2026-08-24 com o suplemento S1b, da lista, com CCL4 na fronteira) sob uma ordem de filtros declarada. O suplemento S1b não é versionado, e a comparação gene a gene não foi refeita em 2026-11. As contagens abaixo foram recalculadas por `analise_gse160208.py` (ver `relatorio_gse160208.md`).
 
 ---
 
@@ -66,7 +68,7 @@ Réplica ponto a ponto: correlação de Pearson **r = 1.000** entre nossas difer
 
 | Métrica | Publicação original | Nossa análise | Compatível? |
 |---|---|---|---|
-| Genes significativos FC | **184** (p<0.05, q≈0.06, >2-fold) | **184 na réplica** com o critério deles; 437 com FDR<0.05 sem filtro de magnitude | ✓ (ver §3.1) |
+| Genes significativos FC | **184** (p<0.05, q≈0.06, >2-fold) | **184** com o filtro de magnitude antes do FDR (183 com o FDR no universo inteiro); sem filtro de magnitude, FDR<0.05: 441 no universo de 742 genes estimáveis, 437 no painel de 800 | ✓ (ver §3.1) |
 | Interseção oficial ∩ nossos sig. | — | **183/184 (99%)** | ✓ |
 | Direção (up/down) | — | **183/183 concordantes** | ✓ |
 | Correlação de magnitudes | — | **r = 1.000** (183 genes) | ✓ |
@@ -80,7 +82,7 @@ Réplica ponto a ponto: correlação de Pearson **r = 1.000** entre nossas difer
 ## 3. Divergências e causas
 
 ### 3.1 Contagem 437 (nosso relatório) vs. 184 (artigo) — NÃO é erro, mas exige redação clara
-Causas somadas: (a) eles aplicam filtro de **magnitude** (log2FC>1) que nós não aplicamos — 264 dos nossos 447 significatos têm |Δ|≤1 (modulações finas, biologicamente reais mas fora do critério deles); (b) limiar de FDR deles é **q≤0.06** (mais frouxo que nosso 0.05); (c) teste diferente (ANOVA/Qlucore vs. Welch por gene) — impacto quase nulo na prática (r=1.000; só CCL4 na fronteira muda). **Correção recomendada**: no relatório, apresentar as DUAS contagens lado a lado ("437 com FDR<0.05 sem filtro de magnitude; 184 replicando o critério integral dos autores").
+Causas somadas: (a) eles aplicam filtro de **magnitude** (log2FC>1) que nós não aplicamos — 255 dos nossos 437 significativos têm |Δ|≤1 (modulações finas, fora do critério deles); (b) limiar de FDR deles é **q≤0.06** (mais frouxo que nosso 0.05); (c) teste diferente (ANOVA/Qlucore vs. Welch por gene) — impacto quase nulo na prática (r=1.000; só CCL4 na fronteira muda). **Correção recomendada**: no relatório, apresentar as DUAS contagens lado a lado ("437 com FDR<0.05 sem filtro de magnitude; 184 replicando o critério integral dos autores").
 
 ### 3.2 "Perda neuronal" como conclusão — EXAGERO NOSSO (leve)
 O artigo **nunca afirma perda neuronal**: zero ocorrências de "neuronal loss". Eles falam em microglia como driver, dendritic cells e regionalidade; "astrocytes killing neurons" aparece apenas como contexto geral na introdução. Nossos genes DOWN (NEFL, TUBB3, BDNF, GRIN2B, RELN, SLC17A6, PNOC) são **compatíveis** com disfunção/perda neuronal-sináptica, mas isso é **inferência nossa**, plausível e apoiada pela literatura — não conclusão dos autores. Reformular para "padrão consistente com sofrimento/disfunção neuronal".
@@ -88,8 +90,8 @@ O artigo **nunca afirma perda neuronal**: zero ocorrências de "neuronal loss". 
 ### 3.3 Estratificação MM1 (SERPINA3 Δ+5.18) — vai ALÉM do publicado (valor agregado, coerente)
 Os autores **não reportam** DEGs estratificados por subtipo; afirmam que subtipos não explicam os padrões regionais/sub-regionais. Nosso achado MM1 é uma extensão própria — consistente com Llorens et al. (citado na discussão deles: upregulação inflamatória maior no FC em MM1). Manter, mas rotular explicitamente como "análise exploratória não realizada na publicação original; n=6".
 
-### 3.4 Nota técnica menor — tratamento de valores ausentes
-Nosso script testou 800 genes → 437 significativos; réplica descartando genes com qualquer valor não numérico (742 testados) → 447. Sensibilidade ~2% ao tratamento de missing/variance-zero, sem impacto nas conclusões ou no ranking dos top genes.
+### 3.4 Nota técnica — universo do FDR e genes sem variância
+58 dos 800 genes do painel têm o mesmo valor (o piso do ensaio) em todas as amostras do córtex frontal: o teste não é estimável e não há p-valor. Com o FDR sobre os 800 (os 58 contando como testes que nunca rejeitam, universo usado até a v0.4) são **437** significativos; com o FDR sobre os 742 estimáveis (universo declarado desde a correção de 2026-11) são **441**. Uma versão anterior desta nota citava "447" para o universo de 742; o valor recalculado é 441, e é esse que vale. A escolha do universo não altera as conclusões nem o ranking dos genes principais.
 
 ### 3.5 Sem erro nosso quanto à amostra excluída
 A série matrix do GEO já contém 47 amostras (13 CJD_CB) — i.e., depositada já sem a CB-20 problemática. Nossa composição bate com a curada final dos autores.

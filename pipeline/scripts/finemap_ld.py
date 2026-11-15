@@ -12,7 +12,7 @@ Método honesto (sem genótipos individuais):
 - λ_GC global e por faixas de MAF/EAF para diagnosticar estratificação.
 
 Saídas: pipeline/reports/relatorio_finemap_loci.md (v2) e relatorio_lambda_gc.md
-Cache: /tmp/stx6_rsid_map.json e /tmp/ld_*.json evitam re-consultas.
+Cache: $DCJ_CACHE (padrão /tmp): *_rsid_map.json e ld_*.json evitam re-consultas.
 """
 import gzip
 import json
@@ -22,12 +22,19 @@ import time
 import urllib.parse
 import urllib.request
 import datetime
+import sys
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-SUMSTATS = BASE / "data" / "GCST90001389_buildGRCh37.tsv.gz"
+sys.path.insert(0, str(BASE / "lib"))
+from coloc_abf import abf as _abf_lib, W_CASO_CONTROLE  # noqa: E402
+from gwas_fonte import exigir_gwas, MEDIANA_CHI2_1GL  # noqa: E402
+
 REPORTS = BASE / "reports"
-CACHE = Path("/tmp")
+# Cache das consultas de LD/rsID (descartável). Diretório configurável por
+# DCJ_CACHE para permitir uma execução do zero sem apagar nada em /tmp.
+CACHE = Path(os.environ.get("DCJ_CACHE", "/tmp"))
+CACHE.mkdir(parents=True, exist_ok=True)
 
 REGIOES = {
     "STX6": ("1", 180_900_000, 181_000_000),
@@ -37,7 +44,7 @@ REGIOES = {
 POP = os.environ.get("LD_POP", "1000GENOMES:phase_3:ALL")
 POP_TAG = POP.split(":")[-1]   # ALL/EUR/... — sufixo de cache e relatório
 R2_CLUSTER = 0.80
-W = 0.04          # variância do prior de Wakefield sobre log(OR)
+W = W_CASO_CONTROLE   # 0,04: variância do prior de Wakefield sobre log(OR)
 
 
 def http_json(url: str, tentativas: int = 3):
@@ -93,17 +100,9 @@ def esummary_pos(rsids: list[str]):
     return out
 
 
-def abf(beta: float, se: float, w: float = W) -> float:
-    """Approximate Bayes Factor de Wakefield."""
-    if se <= 0:
-        return 0.0
-    z2 = (beta / se) ** 2
-    return math.sqrt(se ** 2 / (se ** 2 + w)) * math.exp(z2 * w / (2 * (se ** 2 + w)))
-
-
 def carregar_regiao(crom, ini, fim):
     recs = []
-    with gzip.open(SUMSTATS, "rt") as fh:
+    with gzip.open(exigir_gwas(), "rt") as fh:
         hdr = fh.readline().rstrip("\n").split("\t")
         c = {n: i for i, n in enumerate(hdr)}
         for linha in fh:
@@ -137,10 +136,10 @@ def ld_do_lead(lead_rsid: str, cache_name: str):
 
 
 def main() -> None:
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     L = ["# Fine-mapping v2 — LD real (Ensembl/1000G phase 3) + credible sets descritivos",
          f"*`finemap_ld.py` em {agora}. População: {POP}. Método: ABF de Wakefield "
-         f"(W={W}) + agrupamento por r²≥{R2_CLUSTER} ao lead. Approximate — sem modelo "
+         f"(W={W:g}) + agrupamento por r²≥{R2_CLUSTER} ao lead. Approximate — sem modelo "
          "conjunto (SuSiE exigiria genótipos individuais).*", ""]
     lam_rows = []
     todos_rs = []
@@ -153,7 +152,7 @@ def main() -> None:
     n_total = 0
     chi_all = []
     PASSO_AMOSTRA = 10   # mantém cada 10ª linha para o λ global (independe de ordem)
-    with gzip.open(SUMSTATS, "rt") as fh:
+    with gzip.open(exigir_gwas(), "rt") as fh:
         hdr = fh.readline().rstrip("\n").split("\t")
         c = {n: i for i, n in enumerate(hdr)}
         for linha in fh:
@@ -181,14 +180,14 @@ def main() -> None:
             # amostragem p/ λ global estável (todos os GWS + 10% sistemática)
             if len(chi_all) > 2_000_000 and n_total % 10 != 0:
                 chi_all.pop()
-    lam_global = sorted(chi_all)[len(chi_all)//2] / 0.454936
+    lam_global = sorted(chi_all)[len(chi_all)//2] / MEDIANA_CHI2_1GL
     L_lam = [f"# Diagnóstico λ_GC — GCST90001389",
              f"*`finemap_ld.py` em {agora}. λ = mediana(χ²)/0.454936.*", "",
              f"- λ global (amostra sistemática de {len(chi_all):,}): **{lam_global:.4f}**", "",
              "| Estrato de MAF | n | λ do estrato |", "|---|---|---|"]
     for nome, vals in chi_bins.items():
         vals.sort()
-        lam = vals[len(vals)//2] / 0.454936
+        lam = vals[len(vals)//2] / MEDIANA_CHI2_1GL
         lam_rows.append((nome, len(vals), lam))
         L_lam.append(f"| {nome} | {len(vals):,} | {lam:.4f} |")
     grad = max(l for _, _, l in lam_rows) - min(l for _, _, l in lam_rows)
@@ -284,7 +283,9 @@ def main() -> None:
                         r2_lead[pp] = max(r2_lead.get(pp, 0.0), float(d["r2"]))
 
         for r in recs:
-            r["abf"] = abf(r["beta"], r["se"])
+            # fator de Bayes de Wakefield: implementação única do projeto
+            # (pipeline/lib/coloc_abf.py), a mesma usada pela colocalização
+            r["abf"] = _abf_lib(r["beta"], r["se"], W) if r["se"] > 0 else 0.0
             r["r2_lead"] = r2_lead.get(r["pos"])
         soma = sum(r["abf"] for r in recs) or 1.0
         for r in recs:

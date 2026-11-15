@@ -1,5 +1,5 @@
 # Diagnóstico λ_GC — GCST90001389
-*`finemap_ld.py` em 2026-08-29 15:38. λ = mediana(χ²)/0.454936.*
+*`finemap_ld.py` em 2026-11-11. λ = mediana(χ²)/0.454936.*
 
 - λ global (amostra sistemática de 631,449): **1.0587**
 

@@ -38,8 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from analise_gse140069 import (  # noqa: E402
-    FRACAO_MIN_DETECCAO, PISO, REPORTS,
-    carregar, carregar_covariatas, fdr_bh, resolver, tcdf_p,
+    REPORTS, Desenho, fdr_bh, preparar, tcdf_p, welch,
 )
 
 # nome, descrição, colunas de preditores, rótulo do coeficiente de interesse
@@ -51,26 +50,27 @@ MODELOS = [
     ("M4", "grupo + idade", ["grupo", "idade"], "grupo"),
     ("M4b", "grupo + RIN", ["grupo", "rin"], "grupo"),
     ("M4c", "grupo + sexo", ["grupo", "sexo"], "grupo"),
-    ("M5", "grupo + idade + sexo + RIN  (= v3)", ["grupo", "idade", "sexo", "rin"], "grupo"),
+    ("M5", "grupo + idade + sexo + RIN", ["grupo", "idade", "sexo", "rin"], "grupo"),
 ]
 
 FAIXAS = [(50, 70), (55, 70), (55, 75)]
 
 
+def desenho(preditores, n):
+    """Matriz de desenho fatorada (QR): intercepto + preditores."""
+    return Desenho([[1.0] + [p[i] for p in preditores] for i in range(n)])
+
+
 def ols(y, preditores):
-    """y: lista de floats. preditores: lista de listas. -> (beta, se, df) ou None."""
-    X = [[1.0] + [p[i] for p in preditores] for i in range(len(y))]
-    return resolver(X, y)
+    """y: lista de floats. preditores: lista de listas. -> (beta, se, gl) ou
+    None quando o teste não é estimável (resposta constante, posto deficiente)."""
+    a = desenho(preditores, len(y)).ajustar(y)
+    return (a.beta, a.se, a.gl) if a.estimavel else None
 
 
 def p_do_coef(beta, se, df, idx):
     """p-valor bicaudal do coeficiente idx via t de Student com gl residuais."""
-    if idx >= len(beta) or idx >= len(se):
-        return 1.0
-    s = se[idx]
-    if not s or s != s or s == 0:
-        return 1.0
-    return min(1.0, tcdf_p(abs(beta[idx] / s), df))
+    return min(1.0, tcdf_p(abs(beta[idx] / se[idx]), df))
 
 
 def vif(coluna, outras):
@@ -105,18 +105,11 @@ def cohen_d(xs, ys):
 
 
 def main() -> None:
-    mirnas, grupos, nomes, vals = carregar()
-    covmap = carregar_covariatas()
-
-    grupo = [1 if g != "Control" else 0 for g in grupos]
-    sexo = [covmap.get(n, {}).get("sexo", 0) for n in nomes]
-    idade = [covmap.get(n, {}).get("idade") for n in nomes]
-    rin = [covmap.get(n, {}).get("rin") for n in nomes]
-    ok = [i for i in range(len(nomes)) if idade[i] is not None and rin[i] is not None]
-
-    vals_log = [[math.log2(v + 1.0) for v in linha] for linha in vals]
-    det = [sum(1 for v in linha if v > PISO) / len(linha) >= FRACAO_MIN_DETECCAO
-           for linha in vals]
+    d = preparar()                       # valida categorias e covariáveis
+    mirnas, nomes = d["mirnas"], d["nomes"]
+    grupo, sexo, idade, rin = d["grupo"], d["sexo"], d["idade"], d["rin"]
+    ok = d["ok_ajust"]
+    vals_log, det = d["vals_log"], d["det"]
 
     # ---------- descrição da amostra ----------
     idades_c = [idade[i] for i in ok if grupo[i] == 1]
@@ -146,7 +139,14 @@ def main() -> None:
     resultados = {}
     for chave, nome, cols, alvo in MODELOS:
         vetores = [bloco[c] for c in cols]
-        for universo, teste_mi in (("939", range(len(mirnas))),
+        des = desenho(vetores, len(ok))
+        # Universos de FDR:
+        #   "estimaveis" — declarado: só testes estimáveis;
+        #   "939"        — legado (até a v3): todos os medidos; os não
+        #                  estimáveis contam como testes que nunca rejeitam;
+        #   "filtrado"   — miRNAs que passam no filtro de detecção.
+        for universo, teste_mi in (("estimaveis", range(len(mirnas))),
+                                   ("939", range(len(mirnas))),
                                    ("filtrado", [k for k in range(len(mirnas))
                                                  if det[k]])):
             pares = []
@@ -154,10 +154,12 @@ def main() -> None:
             for k in teste_mi:
                 linha = vals_log[k]
                 y = [linha[i] for i in ok]
-                res = ols(y, vetores)
-                if res is None:
+                aj = des.ajustar(y)
+                if not aj.estimavel:      # ex.: miRNA constante — sem p-valor
+                    if universo == "939":
+                        pares.append((mirnas[k], 1.0))
                     continue
-                beta, se, df = res
+                beta, se, df = aj.beta, aj.se, aj.gl
                 idx = 1 + cols.index(alvo) if alvo in cols else 1
                 pares.append((mirnas[k], p_do_coef(beta, se, df, idx)))
                 beta_grupo[mirnas[k]] = beta[idx]
@@ -173,25 +175,27 @@ def main() -> None:
 
     # ---------- sobreposição com o set de 84 (Welch sem covariáveis) ----------
     # reproduz o M-unadjusted do relatório v3 para medir quanto do set de 84 é idade
-    from analise_gse140069 import welch  # noqa: E402
     idx_c = [i for i in ok if grupo[i] == 1]
     idx_t = [i for i in ok if grupo[i] == 0]
-    unadj = []
+    unadj, unadj_939 = [], []
     for k in range(len(mirnas)):
         linha = vals_log[k]
-        _, p = welch([linha[i] for i in idx_c], [linha[i] for i in idx_t])
-        unadj.append((mirnas[k], p))
+        w = welch([linha[i] for i in idx_c], [linha[i] for i in idx_t])
+        if w is None:                     # variância nula: não estimável
+            unadj_939.append((mirnas[k], 1.0))
+            continue
+        unadj.append((mirnas[k], w[1]))
+        unadj_939.append((mirnas[k], w[1]))
     q_unadj = fdr_bh(unadj)
     sig_unadj = {m for m, _ in unadj if q_unadj[m] < 0.05}
+    q_unadj_939 = fdr_bh(unadj_939)
+    sig_unadj_939 = {m for m, _ in unadj_939 if q_unadj_939[m] < 0.05}
 
-    set_idade = resultados[("M1", "939")]["sig"]
-    set_rin = resultados[("M2", "939")]["sig"]
-    set_grupo = resultados[("M3", "939")]["sig"]
-    g_idade = resultados[("M4", "939")]["sig"]
-    g_rin = resultados[("M4b", "939")]["sig"]
-    g_sexo = resultados[("M4c", "939")]["sig"]
-    g_v3 = resultados[("M5", "939")]["sig"]
-    base = len(resultados[("M3", "939")]["sig"])
+    def conj(chave, universo="estimaveis"):
+        return resultados[(chave, universo)]["sig"]
+
+    set_idade, set_rin, set_grupo = conj("M1"), conj("M2"), conj("M3")
+    g_idade, g_rin, g_sexo, g_v3 = conj("M4"), conj("M4b"), conj("M4c"), conj("M5")
 
     # ---------- faixas etárias ----------
     faixa_rows = []
@@ -209,15 +213,16 @@ def main() -> None:
                                   ("grupo + idade", ["grupo", "idade"], "grupo")):
             vetores = [[({"grupo": grupo, "idade": idade})[c][i] for i in dentro]
                        for c in cols]
+            des_f = desenho(vetores, len(dentro))
             pares = []
             for k in range(len(mirnas)):
                 if not det[k]:
                     continue
                 linha = vals_log[k]
-                res = ols([linha[i] for i in dentro], vetores)
-                if res is None:
+                aj = des_f.ajustar([linha[i] for i in dentro])
+                if not aj.estimavel:
                     continue
-                beta, se, df = res
+                beta, se, df = aj.beta, aj.se, aj.gl
                 idxc = 1 + cols.index(alvo)
                 pares.append((mirnas[k], p_do_coef(beta, se, df, idxc)))
             if not pares:
@@ -228,11 +233,13 @@ def main() -> None:
                            res_f.get("grupo + idade", set())))
 
     # ---------- relatório ----------
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.date.today().isoformat()
     L = ["# GSE140069 — teste empírico do confundimento idade/RIN",
          f"*`analise_gse140069_idade.py` em {agora}. Fase 2 da auditoria "
-         "pré-submissão. Objetivo: testar empiricamente a afirmação de que a idade "
-         "explica o colapso de 84 → 1 miRNAs significativos.*", ""]
+         "pré-submissão, revista na correção de 2026-11 (solver por QR, "
+         "universo do FDR declarado, leitura descritiva). Objetivo: ver o que "
+         "acontece com o número de miRNAs significativos quando cada "
+         "covariável entra no modelo.*", ""]
 
     L += ["## 1. A amostra", "",
           "| covariável | sCJD (n=%d) | controles (n=%d) | diferença | d |" % (
@@ -260,94 +267,92 @@ def main() -> None:
     L += ["", "VIF ≥ 5 indica que o preditor é mal identificado no modelo — a "
           "atribuição de efeito entre covariáveis colineares não é estável.", ""]
 
+    n_est = resultados[("M5", "estimaveis")]["n_testes"]
     L += ["## 3. Cada covariável isolada", "",
-          "Universo 939 = todos os miRNAs (mesmo universo da contagem de 84). "
-          "FDR<0.05 dentro de cada modelo. A coluna β mediana é o efeito do "
+          f"Três universos de FDR, declarados: **estimáveis** ({n_est} testes; "
+          f"universo principal), **939 (legado)** (todos os miRNAs medidos; os "
+          f"{len(mirnas) - n_est} não estimáveis contam como testes que nunca "
+          "rejeitam — é o universo dos números publicados até a v0.4) e "
+          "**filtrado** (miRNAs que passam no filtro de detecção). FDR<0.05 "
+          "dentro de cada modelo e universo. A coluna β mediana é a do "
           "coeficiente de interesse.", "",
-          "| modelo | universo | testes | coef. | FDR<0.05 | β mediana |",
-          "|---|---|---|---|---|---|"]
+          "| modelo | preditores | universo | testes | coef. | FDR<0.05 | β mediana |",
+          "|---|---|---|---|---|---|---|"]
+    rot = {"estimaveis": "estimáveis", "939": "939 (legado)",
+           "filtrado": "filtrado"}
     for chave, nome, cols, alvo in MODELOS:
-        for universo in ("939", "filtrado"):
+        for universo in ("estimaveis", "939", "filtrado"):
             r = resultados.get((chave, universo))
             if not r:
                 continue
-            L.append(f"| {chave} | {r['nome']} | {universo} | {r['n_testes']} | "
-                     f"{alvo} | **{len(r['sig'])}** | {r['beta_med']:+.4f} |")
+            L.append(f"| {chave} | {r['nome']} | {rot[universo]} | "
+                     f"{r['n_testes']} | {alvo} | **{len(r['sig'])}** | "
+                     f"{r['beta_med']:+.4f} |")
     L.append("")
 
-    n84 = len(sig_unadj)
+    n_welch, n_welch_939 = len(sig_unadj), len(sig_unadj_939)
     n_base = len(set_grupo)
-    L += ["## 4. O colapso é idade, RIN ou apenas ajuste?", "",
-          f"O set não-ajustado (Welch, sem covariáveis) tem **{n84}** miRNAs a "
-          f"FDR<0.05 — este é o \"84\" do manuscrito. O mesmo contraste em OLS sem "
-          f"covariáveis dá {n_base}; usamos {n_base} como base dos deltas abaixo.", "",
-          "| modelo | FDR<0.05 | variação vs. grupo sozinho |", "|---|---|---|",
-          f"| idade sozinha (sem grupo) | {len(set_idade)} | — |",
-          f"| RIN sozinho (sem grupo) | {len(set_rin)} | — |",
-          f"| grupo sozinho | {n_base} | base |",
-          f"| grupo + sexo | {len(g_sexo)} | {len(g_sexo)-n_base:+d} |",
-          f"| **grupo + idade** | **{len(g_idade)}** | **{len(g_idade)-n_base:+d}** |",
-          f"| **grupo + RIN** | **{len(g_rin)}** | **{len(g_rin)-n_base:+d}** |",
-          f"| grupo + idade + sexo + RIN (= v3) | {len(g_v3)} | {len(g_v3)-n_base:+d} |", "",
-          f"Sobreposição com o set de {n84}: **{len(sig_unadj & set_idade)}** "
-          f"({len(sig_unadj & set_idade)/max(1,n84):.0%}) são significantemente "
-          f"associados a **idade sozinha**; **{len(sig_unadj & set_rin)}** "
-          f"({len(sig_unadj & set_rin)/max(1,n84):.0%}) a **RIN sozinho**; "
-          f"**{len(sig_unadj & set_grupo)}** a grupo sozinho.", ""]
 
-    # ---- veredito: o teste decisivo é grupo+RIN vs grupo+idade ----
+    def leg(chave):
+        return len(conj(chave, "939"))
+
+    L += ["## 4. O que muda quando cada covariável entra no modelo", "",
+          f"O teste não ajustado do relatório principal é o Welch: "
+          f"**{n_welch}** miRNAs a FDR<0.05 no universo de {n_est} estimáveis "
+          f"({n_welch_939} no universo legado de 939 — o \"84\" das versões "
+          f"anteriores). O mesmo contraste como OLS só com grupo é outro teste "
+          f"(variância agrupada) e dá {n_base} ({leg('M3')}). As comparações "
+          "abaixo são entre modelos OLS, por isso a base é o OLS só com grupo.",
+          "",
+          f"| modelo | FDR<0.05 ({n_est} estimáveis) | variação vs. grupo "
+          "sozinho | FDR<0.05 (939, legado) |", "|---|---|---|---|",
+          f"| idade sozinha (sem grupo) | {len(set_idade)} | — | {leg('M1')} |",
+          f"| RIN sozinho (sem grupo) | {len(set_rin)} | — | {leg('M2')} |",
+          f"| grupo sozinho | {n_base} | base | {leg('M3')} |",
+          f"| grupo + sexo | {len(g_sexo)} | {len(g_sexo)-n_base:+d} | {leg('M4c')} |",
+          f"| **grupo + idade** | **{len(g_idade)}** | **{len(g_idade)-n_base:+d}** | {leg('M4')} |",
+          f"| **grupo + RIN** | **{len(g_rin)}** | **{len(g_rin)-n_base:+d}** | {leg('M4b')} |",
+          f"| grupo + idade + sexo + RIN (modelo do relatório principal) | "
+          f"{len(g_v3)} | {len(g_v3)-n_base:+d} | {leg('M5')} |", "",
+          f"Dos {n_welch} do Welch: **{len(sig_unadj & set_idade)}** "
+          f"({len(sig_unadj & set_idade)/max(1,n_welch):.0%}) também são "
+          f"significativos para **idade sozinha**; "
+          f"**{len(sig_unadj & set_rin)}** "
+          f"({len(sig_unadj & set_rin)/max(1,n_welch):.0%}) para **RIN "
+          f"sozinho**; **{len(sig_unadj & set_grupo)}** para grupo sozinho "
+          "(OLS).", ""]
+
     perda_idade = n_base - len(g_idade)
     perda_rin = n_base - len(g_rin)
-    perda_total = n_base - len(g_v3)
-    frac_idade = perda_idade / perda_total if perda_total > 0 else float("nan")
-
-    # O teste decisivo não é um limiar arbitrário sobre a contagem: é a
-    # comparação direta grupo+idade vs grupo+RIN. Se ajustar só idade quase
-    # esgota o sinal mas ajustar só RIN não, a idade é a responsável.
-    if len(g_idade) <= max(2, 0.15 * n_base) and len(g_rin) > 2 * len(g_idade):
-        causa = (
-            f"**A idade é o confundidor responsável.** Ajustar apenas idade leva "
-            f"o sinal de {n_base} para {len(g_idade)}; ajustar apenas RIN leva a "
-            f"{len(g_rin)}; ajustar apenas sexo deixa {len(g_sexo)}. Somente a "
-            f"idade, isolada, quase esgota o sinal.")
-        redox = (
-            f"A direção da afirmação do manuscrito se sustenta, mas \"fully\" "
-            f"superdeclara: a idade remove {perda_idade} de {perda_total} sinais "
-            f"({frac_idade:.0%}), e o RIN responde pelo resto. Trocar por "
-            f"\"accounts for {frac_idade:.0%} of the collapse\" e citar este modelo.")
-    elif len(g_idade) <= max(2, 0.15 * n_base) and len(g_rin) <= max(2, 0.15 * n_base):
-        causa = ("**Idade e RIN são confundidores intercambiáveis** — qualquer um "
-                 "dos dois, isolado, quase esgota o sinal.")
-        redox = ("A atribuição à idade **não é identificável**: o manuscrito não "
-                 "pode dizer \"because cases were 12.8 years older\", porque o "
-                 "mesmo se diria da qualidade do RNA. Reportar as duas.")
-    elif len(g_idade) <= 0.2 * n_base:
-        causa = (f"**IDADE responde por {frac_idade:.0%} do colapso** "
-                 f"({perda_idade} de {perda_total} sinais).")
-        redox = ("Reescrever de \"fully explains\" para \"accounts for the large "
-                 "majority\": o texto atual superdeclara a fração.")
-    elif len(g_rin) <= max(2, 0.15 * n_base) <= len(g_idade):
-        causa = ("**O RIN é o confundidor responsável**, não a idade.")
-        redox = ("**Atribuição incorreta.** Reescrever a §4.5 e a Discussão.")
-    else:
-        causa = ("**Nenhuma covariate isolada colapsa o sinal** — o ajuste remove "
-                 "a associação sem localizar sua origem.")
-        redox = ("**Remover a atribuição causal.** O defensável é que o modelo "
-                 "ajustado não sustenta a associação, não que a idade a explica.")
-
-    L += ["### Veredito", "", causa, "", redox, "",
-          f"VIF < 1.4 em todos os preditores: a atribuição **é** estimável — este "
-          f"era o ponto que nunca tinha sido verificado no repositório.",
+    perda_sexo = n_base - len(g_sexo)
+    L += ["### Leitura", "",
+          f"**O que as contagens mostram.** Com a idade no modelo, o número de "
+          f"miRNAs com efeito de grupo a FDR<0.05 vai de {n_base} para "
+          f"{len(g_idade)}; só com RIN, para {len(g_rin)}; só com sexo, fica em "
+          f"{len(g_sexo)}; com as três covariáveis, {len(g_v3)}. O sinal não "
+          "ajustado não se sustenta quando a idade é incluída, e o RIN "
+          "sozinho já o reduz bastante.",
           "",
-          f"**Redução do sinal de {n_base} → {len(g_v3)} quando cada covariável é "
-          f"ajustada isoladamente** (contribuições **não aditivas** — somam "
-          f"{perda_idade + perda_rin + n_base - len(g_sexo)} porque as "
-          f"covariáveis capturam variância sobreposta; não são frações de um "
-          f"todo):",
+          "**O que elas não mostram.** Estas são contagens de testes que "
+          "cruzam um limiar em modelos diferentes. Não medem proporção de "
+          "efeito nem de variância. Versões anteriores deste relatório e do "
+          "manuscrito diziam que a idade \"responde por ~97% do colapso\" — a "
+          "conta era (88 − 4)/(88 − 1) sobre as contagens do universo legado. "
+          "Essa leitura foi retirada: uma razão entre contagens de "
+          "significativos não é uma fração atribuível à idade, e as reduções "
+          "por covariável são **não aditivas** "
+          f"(reduções de {perda_idade} com idade, {perda_rin} com RIN e "
+          f"{perda_sexo} com sexo somam "
+          f"{perda_idade + perda_rin + perda_sexo}, mais que a redução de "
+          f"{n_base - len(g_v3)} no modelo completo), porque as "
+          "covariáveis capturam variância sobreposta.",
           "",
-          f"- idade: −{perda_idade} (→ {len(g_idade)} sinais) — **dominante**",
-          f"- RIN: −{perda_rin} (→ {len(g_rin)} sinais) — substancial, mas não suficiente sozinho",
-          f"- sexo: −{n_base - len(g_sexo)} (→ {len(g_sexo)} sinais) — desprezível", ""]
+          "**Sobre o VIF.** VIF < 1,4 em todos os preditores indica que os "
+          "coeficientes são estimáveis separadamente (não há colinearidade "
+          "forte). Não transforma a comparação de contagens em atribuição "
+          "causal: casos e controles diferem em idade por desenho do estudo, "
+          "e um modelo linear em idade pode não capturar toda essa diferença.",
+          ""]
 
     L += ["## 5. Faixa etária restrita", "",
           "Se casos e controles se sobrepõem, o efeito de grupo que sobrevive "
@@ -369,10 +374,11 @@ def main() -> None:
     destino = REPORTS / "relatorio_gse140069_idade.md"
     destino.write_text("\n".join(L), encoding="utf-8")
     print(f"[ok] {destino}")
-    print(f"[ok] não-ajustado={n84}  idade_sozinha={len(set_idade)}  "
-          f"RIN_sozinha={len(set_rin)}  grupo_sozinho={len(set_grupo)}")
-    print(f"[ok] M4(grupo+idade)={len(g_idade)}  M4b(grupo+RIN)={len(g_rin)}  "
-          f"M4c(grupo+sexo)={len(g_sexo)}  M5(v3)={len(g_v3)}")
+    print(f"[ok] universo {n_est} (legado 939 entre parênteses)")
+    print(f"[ok] não-ajustado={n_welch} ({n_welch_939})  idade_sozinha={len(set_idade)} ({leg('M1')})  "
+          f"RIN_sozinha={len(set_rin)} ({leg('M2')})  grupo_sozinho={len(set_grupo)} ({leg('M3')})")
+    print(f"[ok] M4(grupo+idade)={len(g_idade)} ({leg('M4')})  M4b(grupo+RIN)={len(g_rin)} ({leg('M4b')})  "
+          f"M4c(grupo+sexo)={len(g_sexo)} ({leg('M4c')})  M5={len(g_v3)} ({leg('M5')})")
     print(f"[ok] VIF: " + "  ".join(f"{k}={v:.2f}" for k, v in vifs.items()))
 
 

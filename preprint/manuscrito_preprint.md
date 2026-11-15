@@ -1,10 +1,38 @@
 # Independent reanalysis of the largest sporadic Creutzfeldt–Jakob disease genome-wide association study confirms all published loci and refines the STX6 signal
 
 **Arthur Araújo da Silva** — Independent Researcher, Brazil
-*Preprint draft v0.4 — 2026-10-04 — target: bioRxiv*
+*Preprint draft v0.5 — 2026-11-11 — target: bioRxiv*
 
 *Independent data-organization initiative. This work uses only publicly deposited, anonymized
 datasets; it involves no patient-identifiable data and makes no clinical claim.*
+
+> **Correction notice (v0.5, replaces v0.4).** Version 0.4 of this preprint stated that the STX6
+> GWAS signal and the brain STX6 eQTL could not be attributed to a shared causal variant (H₃ ≈ 0.995,
+> "H₄ unidentifiable"). **That statement was wrong, and it came from an error in our own code.**
+> In the colocalization routine the H₄ term was multiplied by p₁·p₂·p₁₂ instead of p₁₂, which
+> suppresses H₄ by a factor of 10⁸ under the default priors. Two further errors sat in the same
+> function: √r in place of √(1−r) in the Wakefield Bayes factor, and a prior variance of 0.04²
+> labelled as the `coloc` default (the default is 0.04 for case–control traits). The "validation
+> against R" reported in v0.4 compared two copies of the same wrong equation; the reference
+> `coloc.abf` output, which v0.4 explained away as "prior dependence", was the correct result.
+> With the corrected implementation, verified variant by variant against `coloc.abf` 5.2.3, the
+> same data give a posterior probability of **0.98** for a shared causal variant (0.83 with
+> p₁₂ = 10⁻⁶). Other changes in v0.5:
+> - GTEx sample sizes follow the eQTL Catalogue release-8 metadata (268 and 263; 2,156 samples in
+>   total, not ~2,182); variants are harmonised by full identity (position, REF, ALT).
+> - Tests that cannot be estimated (74 miRNAs and 58 genes with no variance) no longer receive a
+>   p-value and are excluded from the FDR universe, which is now declared for every count. Headline
+>   counts change from 84 to 89 (blood miRNAs, unadjusted) and from 437 to 441 (brain genes); the
+>   v0.4 counts are reported alongside. The adjusted blood result is unchanged (1 miRNA).
+> - The statement that age "accounts for ~97%" of the blood-miRNA collapse is withdrawn: a ratio
+>   of counts of significant tests is not an attributable fraction.
+> - "Exact replication" of the brain DEG count is replaced by what was actually reproduced: the
+>   published count, under a stated order of filters.
+> - The blood × brain target-enrichment test used the wrong universe; recomputed, it is still null.
+> - Claims of a dependency-free, R-validated statistical core are replaced by a description of the
+>   actual dependencies and of the reference tests now in place.
+>
+> A complete list with before/after values is in `CORRECOES.md` in the repository.
 
 ---
 
@@ -17,10 +45,11 @@ have since been used by other groups for multi-omic risk-gene prioritization and
 method development. We report an audit conducted independently of those analyses.
 
 **Methods.** We reanalysed the deposited summary statistics (GCST90001389; 6,314,492 variants,
-GRCh37) end to end, implementing all inferential statistics from first principles and
-cross-validating them against R: genomic-control inflation, genome-wide significance screening,
-Wakefield approximate Bayes factors, linkage-disequilibrium clustering against 1000 Genomes
-phase 3, and stratified inflation by minor-allele-frequency bin. We additionally reanalysed two
+GRCh37) end to end, implementing the inferential statistics from first principles and checking
+them against reference implementations (the R package `coloc`, SciPy, statsmodels):
+genomic-control inflation, genome-wide significance screening, Wakefield approximate Bayes
+factors, linkage-disequilibrium clustering against 1000 Genomes phase 3, stratified inflation by
+minor-allele-frequency bin, and colocalization with brain expression QTLs. We additionally reanalysed two
 companion expression datasets (GSE160208 brain; GSE140069 whole blood).
 
 **Results.** We independently reproduced **all three published loci** — PRNP chr20:4,672,307
@@ -30,19 +59,24 @@ companion expression datasets (GSE160208 brain; GSE140069 whole blood).
 0.0156 across allele-frequency strata. Fine-mapping shows the STX6 signal is one cohesive
 haplotype block carrying 90.5% of regional posterior mass. A blind clumping scan rediscovered the
 three known loci without locus hints (3/3), indicating pipeline sensitivity rather than circular
-confirmation. A five-cohort brain eQTL meta-analysis (~2,182 samples) renders the STX6 lead variant
-a genome-wide significant eQTL (p = 7.60×10⁻⁴⁷) with 89% direction concordance, reproducing the
-expression–disease relationship previously established with a larger multi-omic design. No
-significant cis-sQTL was detected for STX6 in any cohort; because only significance-passed pairs
-are available, this bounds what we can detect rather than establishing absence. In GSE140069, the
-blood microRNA signature falls from 84 FDR-significant miRNAs unadjusted to 1 after adjustment for
-age, sex and RNA integrity; isolating each covariate attributes ~97% of that collapse to age
-(all variance-inflation factors < 1.4).
+confirmation. A five-cohort brain eQTL meta-analysis (2,156 samples) makes the STX6 lead variant
+a genome-wide significant eQTL (p = 7.60×10⁻⁴⁷) with 89% direction concordance, and
+approximate-Bayes-factor colocalization gives a posterior probability of 0.98 for a causal variant
+shared between sCJD risk and STX6 expression under the default `coloc` priors (0.83 with
+p₁₂ = 10⁻⁶), assuming a single causal variant per trait. This reproduces the expression–disease
+relationship previously established with larger multi-omic designs; colocalization is not
+evidence of mediation. No significant cis-sQTL was detected for STX6 in any cohort; because only
+clusters with a significant signal are available, this bounds what we can detect rather than
+establishing absence. In GSE140069, the number of FDR-significant blood microRNAs falls from 89
+unadjusted (84 FDR-significant miRNAs when the 74 non-estimable ones are counted as tests, as in
+v0.4) to 1 after adjustment for age, sex and RNA integrity; adding age alone to the group-only
+model reduces the count from 92 to 4.
 
 **Conclusions.** Public prion-disease summary statistics support rigorous independent
 verification by non-consortium parties. This study confirms the published loci and their local LD
-structure, quantifies the ceiling of summary-statistics-only fine-mapping, and measures how much
-covariate confounding inflates a blood-based biomarker signature. All code and reports are openly
+structure, quantifies the ceiling of summary-statistics-only fine-mapping, reproduces the
+published colocalization of the STX6 signal with brain STX6 expression, and shows how strongly a
+blood-based biomarker signature depends on covariate adjustment. All code and reports are openly
 available.
 
 ---
@@ -85,7 +119,7 @@ something, we state precisely what is new and what is not.
 | Blood microRNA | GSE140069 | 57 sCJD / 48 controls, 939 miRNAs |
 | LD reference | 1000 Genomes phase 3 (ALL) | via Ensembl REST `ld` endpoint |
 
-Integrity: SHA-style MD5 checksums recorded before analysis (Appendix of project repository).
+Integrity: the GWAS file is verified against the MD5 published by the GWAS Catalog (`pipeline/scripts/obter_gwas.py`); the eQTL extracts carry SHA-256 checksums and release provenance (`pipeline/data/proveniencia_qtl.tsv`).
 
 ## 3. Methods
 
@@ -99,10 +133,10 @@ GRCh37 gene coordinates retrieved live from Ensembl REST (never from memory) for
 Per-variant Wakefield ABF with prior variance W = 0.04 on log(OR): ABF_i = √(SE²/(SE²+W))·exp(χ²ᵢW/(2(SE²+W))). Regional posteriors πᵢ ∝ ABFᵢ. Because individual genotypes are unavailable, we report **cluster-level credible mass**: variants are grouped by pairwise r² ≥ 0.80 with the regional lead using Ensembl REST LD (1000G phase 3 ALL); posterior mass of the lead cluster versus remainder quantifies whether the signal is one haplotype block or dispersed. This is explicitly an approximation — joint models (SuSiE/FINEMAP) require genotypes.
 
 ### 3.4 Expression analyses
-GSE160208: Welch t-tests on log₂-transformed normalized intensities, frontal-cortex-only contrasts, Benjamini–Hochberg FDR; exact replication of the original authors' criteria (p<0.05 ∧ |log₂FC|>1) alongside our FDR<0.05 criterion. GSE140069: log₂(x+1) transform; primary model = OLS log₂ ~ group + sex + age + RIN (covariates from the series matrix; the original publication adjusted age); sensitivity analyses unadjusted and detection-filtered. Effect sizes as Cohen's d. All statistics cross-validated against R anchors (t distribution CDF and BH procedure matched to ≤10⁻¹³ relative error; permutation calibration of FDR).
+GSE160208: Welch t-tests on log₂-transformed normalized intensities, frontal-cortex-only contrasts, Benjamini–Hochberg FDR. The original authors' criteria (p < 0.05, q ≤ 0.06, |log₂FC| > 1) are applied with the order of the filters as an explicit parameter (FDR over the whole test universe followed by the magnitude filter, or magnitude filter first), alongside our FDR < 0.05 criterion. GSE140069: log₂(x+1) transform; primary model = OLS log₂ ~ group + sex + age + RIN, fitted by QR decomposition (covariates from the series matrix; the original publication adjusted age); sensitivity analyses unadjusted and detection-filtered. Effect sizes as Cohen's d. In both datasets a feature with no variance is not estimable: it receives no p-value and is excluded from the FDR universe, which is stated with every count (counts over all measured features, as used in v0.4, are given alongside). Group and sex categories and numeric covariates are validated on input. The t distribution, Welch test, BH procedure and least-squares fit are checked in the test suite against SciPy, statsmodels and NumPy.
 
 ### 3.5 Colocalization with brain eQTLs
-For the STX6 region (chr1:180.9–181.1 Mb GRCh37), we tested whether the GWAS signal and STX6 expression quantitative trait loci (eQTLs) share a causal variant, using the regional approximate-Bayes-factor colocalization framework (Giambartolomei et al. 2014) implemented from the published equations: prior W = 0.04²; priors p₁ = p₂ = 10⁻⁴, p₁₂ = 10⁻⁵ (sensitivity: 10× more conservative). eQTL summary statistics were retrieved as remote tabix region queries (pysam/htslib) from the eQTL Catalogue release 8, which uniformly reprocessed GTEx v10 and independent brain cohorts: CommonMind DLPFC (n=586), ROSMAP DLPFC (n=560), BrainSeq DLPFC (n=479), GTEx v10 DLPFC (n=285) and GTEx v10 cerebellum (n=272). eQTL coordinates (GRCh38) were converted to GRCh37 by subtracting a single constant offset (−30,864 bp) determined from the STX6 gene boundaries. **We verified this offset against the Ensembl assembly-mapping service**, sampling points across the full STX6 span in GRCh37: the returned GRCh38 coordinate is exactly +30,864 bp at every point sampled, and every eQTL variant that pairs with a GWAS variant under the constant also pairs under the service's own mapping. A constant offset is exact only where no assembly-level indel intervenes, so this verification bounds rather than eliminates the concern — a reimplementation should still prefer a chain-file liftOver — but for the STX6 window it holds empirically, and the colocalization result does not depend on the approximation. Alleles were harmonised to the ALT/effect convention (0 incompatible variants discarded). Because no single cohort is individually powered, we additionally performed an inverse-variance-weighted meta-eQTL across the five cohorts (~2,182 brain samples), yielding a meta-eQTL signal at the GWAS lead variant of p = 7.60×10⁻⁴⁷ (the regional minimum, a different variant, reaches p = 6.60×10⁻⁴⁷). Implementation validation: (i) an independent reimplementation of the ABF/posterior equations in R agrees with our Python code to 6 decimal places (H₃ = 0.994997 vs 0.9950); (ii) the standard R `coloc.abf` (coloc 5.2.3) reproduces the combined both-signal posterior (H₂+H₃+H₄ = 1.000) with per-variant PP.H₄ Spearman ρ = 0.91 against our ABF-diagonal mass — while demonstrating that the shared-vs-distinct split (H₄ vs H₃/H₂) is prior-dependent, as declared. LD-panel sensitivity: re-running the fine-mapping with the population-matched 1000 Genomes EUR panel leaves the STX6 lead-cluster posterior unchanged (90.5% at r²≥0.8), improves PRNP tagging (58.9% → 80.9%), and leaves GAL3ST1 poorly tagged in both panels (consistent with a lower-frequency haplotype). Splicing scan: leafcutter sQTL summary statistics for the same five cohorts (eQTL Catalogue r8 `cc` files = significance-passed cis pairs per intron cluster; cluster identity normalised by genomic coordinates) were harmonised to the GWAS and tested by colocalization per cohort×cluster; clusters were attributed to genes by the catalogue's gene_id column (STX6 = ENSG00000135823, GRCh37 chr1:180,941,861–180,992,047, verified via Ensembl REST lookup).
+For the STX6 region (chr1:180.9–181.1 Mb GRCh37), we tested whether the GWAS signal and STX6 expression quantitative trait loci (eQTLs) share a causal variant, using approximate-Bayes-factor colocalization (Giambartolomei et al. 2014) as implemented in the R package `coloc` (`approx.bf.estimates`, `combine.abf`), which we reimplemented in log space. Effect-size priors follow `coloc`: prior variance 0.04 (SD 0.2) for the case–control GWAS and 0.0225 (SD 0.15·sdY with sdY = 1) for the eQTL, whose expression phenotype is normalised before mapping (the sdY implied by the summary statistics is 0.67–1.00 across cohorts). Per-variant hypothesis priors are p₁ = p₂ = 10⁻⁴ and p₁₂ = 10⁻⁵, with sensitivity to p₁₂ (5×10⁻⁶ and 10⁻⁶ at fixed p₁ and p₂) and to the effect prior. eQTL summary statistics were retrieved as remote tabix region queries (pysam/htslib) from the eQTL Catalogue release 8, which uniformly reprocessed GTEx v10 and independent brain cohorts: CommonMind DLPFC (n=586), ROSMAP DLPFC (n=560), BrainSeq DLPFC (n=479), GTEx v10 DLPFC (n=268) and GTEx v10 cerebellum (n=263); sample sizes are those of the release-8 dataset metadata and do not enter the Bayes factors, which are computed from β and SE. The extracts are versioned with checksums and were confirmed byte-identical to the live release on 2026-11-10. eQTL coordinates (GRCh38) were converted to GRCh37 by subtracting a single constant offset (−30,864 bp) determined from the STX6 gene boundaries. **We verified this offset against the Ensembl assembly-mapping service**, sampling points across the full STX6 span in GRCh37: the returned GRCh38 coordinate is exactly +30,864 bp at every point sampled, and every eQTL variant that pairs with a GWAS variant under the constant also pairs under the service's own mapping. A constant offset is exact only where no assembly-level indel intervenes, so this verification bounds rather than eliminates the concern — a reimplementation should still prefer a chain-file liftOver — but for the STX6 window it holds empirically, and the colocalization result does not depend on the approximation. Variants were harmonised by full identity (position, REF, ALT; indels trimmed; rows repeated per rsID collapsed), with the eQTL ALT allele as effect allele; the GWAS was matched on both alleles, inverting its sign where its effect allele is the eQTL REF (among the 390 matched variants: 0 sign inversions needed, 0 incompatible alleles, 0 matches on the complementary strand only). Because no single cohort is individually powered, we performed a fixed-effect inverse-variance-weighted meta-eQTL across the five cohorts (2,156 brain samples; variants present in at least three cohorts; only identical alleles combined), yielding a meta-eQTL signal at the GWAS lead variant of p = 7.60×10⁻⁴⁷. Sensitivity analyses: DerSimonian–Laird random effects, leave-one-cohort-out, exclusion of both GTEx tissues (which share donors) and single-cohort analyses. Implementation check: per-variant posteriors (SNP.PP.H4) from our code agree with `coloc.abf` (coloc 5.2.3, R 4.5.3) to within 2×10⁻¹⁵ on all 390 variants, the summary posteriors agree, and synthetic cases are checked against explicit enumeration of the causal configurations. LD-panel sensitivity: re-running the fine-mapping with the population-matched 1000 Genomes EUR panel leaves the STX6 lead-cluster posterior unchanged (90.5% at r²≥0.8), improves PRNP tagging (58.9% → 80.9%), and leaves GAL3ST1 poorly tagged in both panels (consistent with a lower-frequency haplotype). Splicing scan: leafcutter sQTL summary statistics for the same five cohorts (eQTL Catalogue r8 `cc` files, which contain only intron clusters with a significant cis signal; cluster identity given by genomic coordinates) were harmonised to the GWAS in the same way and tested by colocalization per cohort×cluster; clusters were attributed to genes by the catalogue's gene_id column (STX6 = ENSG00000135823, GRCh37 chr1:180,941,861–180,992,047, verified via Ensembl REST lookup).
 
 ### 3.6 Blind whole-genome clumping (discovery sensitivity)
 To demonstrate that our pipeline would find the known loci rather than merely confirm them, we scanned all 6,314,492 variants blind (threshold p < 10⁻⁵) and applied greedy distance clumping (±500 kb; lead = smallest p within cluster), with no locus annotation used until after cluster definition. Known loci were matched post hoc.
@@ -110,14 +144,14 @@ To demonstrate that our pipeline would find the known loci rather than merely co
 ## 4. Results
 
 ### 4.1 Sumstats integrity and inflation
-Zero malformed records among 6,314,492 lines. Global λ_GC = 1.0587 (liminal, acceptable). Stratified λ:
+Zero malformed records among 6,314,492 lines. Global λ_GC = 1.0587 over all variants (liminal, acceptable). Stratified λ, computed on a systematic one-in-ten sample of variants:
 
-| MAF stratum | n | λ |
+| MAF stratum | n (sampled) | λ |
 |---|---|---|
-| <0.05 | 325,236 | 1.0617 |
-| 0.05–0.25 | 532,664 | 1.0579 |
-| 0.25–0.45 | 328,920 | 1.0547 |
-| ≥0.45 | 76,078 | 1.0703 |
+| <0.05 | 162,618 | 1.0617 |
+| 0.05–0.25 | 266,332 | 1.0579 |
+| 0.25–0.45 | 164,460 | 1.0547 |
+| ≥0.45 | 38,039 | 1.0703 |
 
 Gradient 0.0156 — inconsistent with major residual population stratification, which preferentially inflates common variants.
 
@@ -128,7 +162,7 @@ Gradient 0.0156 — inconsistent with major residual population stratification, 
 | GAL3ST1 | chr22:30,950,360 T>C | 6.18×10⁻¹⁰ | −0.169 | GAL3ST1 promoter/5′ region |
 | STX6 | chr1:180,961,245 G>A | 7.51×10⁻⁹ | −0.149 | intragenic STX6 (Ensembl 180,941,861–180,992,047) |
 
-All 41 genome-wide-significant variants fall within these three regions; none elsewhere. A blind whole-genome clumping scan (Section 3.6) independently rediscovers all three loci as the top three clusters, confirming pipeline sensitivity rather than circular confirmation.
+All 41 genome-wide-significant variants fall within these three regions (16 at PRNP, 2 at GAL3ST1, 23 at STX6); none elsewhere. A blind whole-genome clumping scan (Section 3.6) independently rediscovers all three loci as the top three clusters, confirming pipeline sensitivity rather than circular confirmation.
 
 ### 4.3 Cluster-level fine-mapping
 - **PRNP**: 337 regional variants; anchor rs60704301 (merged → rs2093390). Posterior mass 100% within r²≥0.50 of the anchor in **both LD panels** (58.9% at r²≥0.80 with the ALL panel; **80.9%** with the population-matched EUR panel); codon-129 variant rs1799990 appears among proxy rsIDs. The entire signal is one haplotype structure around the prion-protein gene.
@@ -156,56 +190,78 @@ to confirm that the STX6 signal is one cohesive haplotype rather than a set of i
 false positives, and to quantify how much of the regional posterior mass any given analysis
 method leaves unattributed.
 
-### 4.5 Expression signatures replicate exactly (brain) but are fragile under covariate adjustment (blood)
-Brain GSE160208: 437/800 genes FDR<0.05; 184 DEGs under original criteria — identical count and rank order (r = 1.000 top-10). Blood GSE140069: unadjusted log₂-Welch yields 84 significant miRNAs (10↑/74↓); OLS adjusting age+sex+RIN leaves **1** (hsa-miR-500a-3p); the four discovery miRNAs retain direction and nominal significance (p = 7×10⁻⁴–4×10⁻²) but only hsa-miR-93-5p survives FDR within the detection-filtered universe (q = 0.048). Cases were on average 12.8 years older than controls (66.4 vs 53.6, Cohen's d = 1.07) with lower RNA integrity (RIN 5.59 vs 6.50, d = −0.71) — a textbook confounding structure that the original paper partially addressed (age via Partek GSA). We isolated each covariate rather than inferring the cause from the joint adjustment: age alone accounts for 84 of the 87 lost signals (88 → 4 FDR-significant), RNA integrity alone for 62 (88 → 26), and sex for 3 (88 → 85); all variance-inflation factors are below 1.4, so these contributions are separately identifiable rather than collinear. Age is thus the dominant confounder and accounts for ~97% of the collapse, with RNA integrity accounting for the remainder. Age-restricted analyses within age-overlapping strata (50–70 years, residual gap +2.7 years) leave 5–7 miRNAs, but are underpowered at 22–29 controls per stratum and bound rather than resolve any residual effect. Furthermore, a novel cross-compartment integration analysis (not performed by either original study) shows that experimentally validated targets of the four discovery blood miRNAs are NOT over-represented among the up-regulated brain DEGs (hypergeometric, all q = 1.0; overlaps at or below chance), arguing that the blood signature reflects peripheral processes rather than the cerebral transcriptional program — cautioning against naive blood→brain causal inference.
+### 4.5 Expression signatures: the brain count is reproduced under a stated filter order; the blood signature is fragile under covariate adjustment
+Brain GSE160208: 58 of the 800 panel genes have no variance in frontal cortex and are not estimable; 441 of the 742 estimable genes are FDR < 0.05 (315 up, 126 down; 437 when the FDR is computed over all 800 genes, as in v0.4). Under the original authors' criteria (p < 0.05, q ≤ 0.06, |log₂FC| > 1) the count depends on the order of the filters: it is 184, the published count, when the magnitude filter is applied before the FDR, and 183 when the FDR is computed over the whole test universe (CCL4 is the borderline gene). We therefore report this as reproducing the published count under a stated filter order; an earlier comparison with the authors' supplementary gene list (August 2026, not repeated for this version) found the same top-ranked genes in each direction. The authors' q-values were not reproduced, and this is not an exact replication of their procedure. Blood GSE140069: 74 of the 939 miRNAs are constant across all samples and are not estimable. Among the 865 estimable miRNAs, unadjusted log₂-Welch yields 89 FDR-significant miRNAs (12↑/77↓; 84, 10↑/74↓, in the v0.4 universe of 939); OLS adjusting age+sex+RIN leaves **1** (hsa-miR-500a-3p) in either universe. That survivor is a detected/not-detected effect: the miRNA is above the detection floor in 27 of 57 cases and 46 of 48 controls, so its coefficient of −7.9 log₂ units reflects the detection rate rather than a several-hundred-fold change in abundance. The four discovery miRNAs retain direction and nominal significance (p = 7×10⁻⁴–4×10⁻²) but only hsa-miR-93-5p survives FDR within the detection-filtered universe (q = 0.048). Cases were on average 12.8 years older than controls (66.4 vs 53.6, Cohen's d = 1.07) with lower RNA integrity (RIN 5.59 vs 6.50, d = −0.71) — a textbook confounding structure that the original paper partially addressed (age via Partek GSA). We also fitted each covariate separately (OLS, 865 estimable miRNAs): the group-only model gives 92 FDR-significant miRNAs; adding age alone leaves 4, RNA integrity alone 28, sex alone 94, and all three 1 (v0.4 universe: 88, 4, 26, 85 and 1). All variance-inflation factors are below 1.4, so the coefficients are separately estimable. These are counts of tests crossing a threshold under different models. They show that the unadjusted signal does not survive adjustment for age and that RNA integrity alone already removes most of it; they are not additive, and they do not measure a proportion of the effect attributable to age. The corresponding attribution in v0.4 is withdrawn. Age-restricted analyses within age-overlapping strata (50–70 years, residual gap +2.7 years) leave 5–7 miRNAs, but are underpowered at 22–29 controls per stratum and bound rather than resolve any residual effect. Finally, an exploratory cross-compartment test (not performed by either original study) asks whether experimentally validated human targets of the four discovery blood miRNAs and of hsa-miR-500a-3p are over-represented among the up-regulated brain genes. With each miRNA's targets restricted to genes on the testable panel (N = 742, of which 315 are up-regulated), three miRNAs are testable: they have 13, 6 and 3 targets on the panel, of which 6, 3 and 1 are up-regulated (hypergeometric p = 0.50, 0.51 and 0.81); the other two have no validated target on the panel and cannot be tested. With so few targets and 42% of the panel up-regulated, the test has little power, and the null result neither supports nor argues against a relationship between the blood miRNAs and the cerebral transcriptional programme. (Version 0.4 ran this test with all genome-wide targets against N = 800, which gave incorrect expected counts and p-values.)
 
-### 4.7 Colocalization: the STX6 GWAS signal and a brain eQTL occupy the same region
-Per-cohort colocalization is power-limited (eQTL n ≤ 586; the GWAS lead is only a suggestive
-single-cohort eQTL, with concordant direction in 78–81% of regional variants). The five-cohort
-meta-eQTL is more informative: it renders the lead GWAS variant a **genome-wide significant STX6
-eQTL (p = 7.60×10⁻⁴⁷; z ≈ 14)** with **89% effect-direction concordance** across 390 harmonised
-variants. (The strongest eQTL in the region is a different variant, at chr1:180,949,780, with
-p = 6.60×10⁻⁴⁷; we report the lead variant's value throughout and name this one explicitly to avoid
-conflating the two.)
+### 4.7 Colocalization: support for a causal variant shared by the STX6 GWAS signal and the brain STX6 eQTL
+Colocalization within a single GTEx tissue is power-limited (largest eQTL |z| = 3.8 in either
+tissue; concordant effect direction at 78–81% of variants). The five-cohort meta-eQTL is more
+informative: it makes the lead GWAS variant a **genome-wide significant STX6 eQTL
+(p = 7.60×10⁻⁴⁷; z = −14.4; five cohorts, I² = 48%)** with **89% effect-direction concordance**
+across 390 harmonised variants (348/390). The lead GWAS variant is not the strongest eQTL in the
+block: the smallest meta-eQTL p-value is at chr1:180,951,692 (p = 3.44×10⁻⁴⁷), and thirteen
+further variants, the GWAS lead among them, have p-values within a factor of three of it.
 
-In the regional colocalization framework the posterior collapses onto the hypotheses in which both
-traits have a causal variant in the region: **H₀+H₁ ≈ 0 and H₂+H₃+H₄ = 1.000 in every
-parametrization tested** (H₃+H₄ ≈ 0.995 under our default prior; the standard R `coloc.abf` 5.2.3
-with its own priors assigns 98% to H₄). This needs stating precisely, because the distinction
-matters: **H₂ and H₃ are hypotheses of two distinct causal variants**, not a null hypothesis. What
-the collapse establishes is that the GWAS signal and a brain eQTL are both genuinely associated
-within STX6 — it does not by itself establish that they are driven by the same variant. Only H₄
-asserts a shared causal variant, and the split between H₄ and H₃ is formally unidentifiable here,
-because all cluster members are in r² ≥ 0.97 LD. The 98% figure quoted from `coloc.abf` is
-therefore prior-dependent, not an estimate of shared causality: our own prior moves H₃+H₄, and
-`coloc` assigns the mass to H₄ differently. We report the block-level posterior and the direction
-concordance rather than an H₄ point estimate.
+Under the default `coloc` priors (p₁ = p₂ = 10⁻⁴, p₁₂ = 10⁻⁵) the posterior probabilities are
+H₀ ≈ H₁ ≈ 0, H₂ = 7×10⁻⁶, **H₃ = 0.020 and H₄ = 0.980**. H₁ and H₂ are association with only one
+of the two traits; H₃ is association with both through distinct causal variants; H₄ is association
+with both through one shared causal variant. The analysis therefore supports a shared causal
+variant, under the model's assumption of at most one causal variant per trait in the region.
+Three qualifications belong with that number.
 
-Our implementation was validated by an exact reimplementation of the ABF/posterior equations in R
-(agreement to six decimal places) and against the standard `coloc.abf` package (per-variant PP.H4
-Spearman ρ = 0.91 against our ABF-diagonal mass).
+*Sensitivity to p₁₂.* p₁₂ is the only prior that separates H₄ from H₃. With p₁ = p₂ = 10⁻⁴, H₄ is
+0.980 at p₁₂ = 10⁻⁵, 0.960 at 5×10⁻⁶ and 0.828 at 10⁻⁶. (The scenario p₁ = p₂ = 10⁻⁶, p₁₂ = 10⁻⁷,
+which v0.4 called "conservative", raises the ratio p₁₂/(p₁p₂) from 10³ to 10⁵ and therefore
+favours H₄; it gives 0.9998 and is not used as evidence.)
 
-Taken together — a genome-wide significant meta-eQTL at the GWAS lead, 89% direction concordance,
-a single fine-mapping cluster, and the exclusion of H₀/H₁ — the evidence is consistent with, but
-does not establish, regulation of STX6 expression as the mechanism underlying the association.
-This conclusion reproduces work already reported independently [4], which reached the same
-interpretation using a larger multi-omic design including protein-level QTLs.
+*Numerical robustness.* H₄ stays at 0.979–0.980 for effect-prior variances from 0.0016 to 0.1;
+is 0.975 with DerSimonian–Laird random effects (Cochran's Q has p < 0.05 at 36 of the 390
+variants, and I² > 50% at 51); 0.979–0.980 leaving out any one cohort; and 0.979 without both GTEx
+tissues. CommonMind, ROSMAP and BrainSeq each give 0.978–0.979 on their own. The two GTEx tissues,
+which share donors and are not independent cohorts, give 0.70 (DLPFC, n = 268) and 0.57
+(cerebellum, n = 263) on their own, with most of the remaining mass on H₁ (H₃ ≈ 0.05): a power
+limitation of small single-tissue eQTL samples, not support for distinct variants.
+
+*How much comes from the prior.* The associated variants form a block in near-perfect LD. If all
+390 variants were statistically equivalent, the prior alone would give H₄/H₃ =
+p₁₂/(p₁p₂(n−1)) ≈ 2.6; the observed posterior ratio is ≈ 48. Part of the separation between H₃ and
+H₄ therefore comes from the prior, and the data sharpen it about 19-fold. Conditional on H₄, the
+95% credible set for the shared variant contains 17 variants; the variant with the highest
+posterior (chr1:180,951,692; 0.105) is not the GWAS lead (0.063).
+
+*What this analysis does not show.* Colocalization tests for a shared causal variant. It does not
+test mediation, and it does not show that STX6 expression lies on the causal path between the
+variant and disease. It assumes a single causal variant per trait, does not model LD, and uses
+adult DLPFC and cerebellum, which only approximate the tissues and cell types affected in sCJD.
+The result reproduces work already reported independently [1,4], which linked the STX6 risk locus
+to STX6 expression using larger designs that include protein-level QTLs; we make no claim of
+novelty.
+
+*Implementation check.* Per-variant posteriors from our implementation match the R package
+`coloc.abf` (coloc 5.2.3) to within 2×10⁻¹⁵ on all 390 variants, and the summary posteriors match
+(H₄ = 0.9796, H₃ = 0.0204). Version 0.4 reported H₃ = 0.995 from an erroneous formula; see the
+correction notice at the top of this document.
 
 ### 4.8 Splicing: no significant cis-sQTL for STX6 detected in any of the five brain cohorts
 The eQTL Catalogue release 8 provides leafcutter splicing-QTL summary statistics for the same five
 brain cohorts. We scanned every significant intron-cluster whose cis window intersects the STX6
-region, harmonised variants to the GWAS and ran the validated colocalization per cohort × cluster
+region, harmonised variants to the GWAS and ran the colocalization per cohort × cluster
 (6 tests in total). **No significant cis-sQTL cluster for STX6 was detected in any of the five
 cohorts** (0/5), in contrast to the strong expression QTL at the same lead variant
-(p = 7.60×10⁻⁴⁷); and no neighbouring-gene splicing signal (KIAA1614, QSOX1, RP5-1180C10.2)
-colocalizes with the GWAS either (all PP.H4 ≈ 0, with a Bonferroni-aware reading).
+(p = 7.60×10⁻⁴⁷). The six tests concern intron clusters of neighbouring genes (KIAA1614, QSOX1
+and ENSG00000230124), not of STX6. None reaches PP.H₄ > 0.8. The highest is 0.60, for a KIAA1614
+cluster in GTEx cerebellum; it falls to 0.13 with p₁₂ = 10⁻⁶, has concordant effect direction at
+only 21% of variants, and is not reproduced in the three other cohorts that carry the same
+cluster (0.19, 0.05 and below 0.001). We do not interpret it as colocalization. (Version 0.4
+reported all six as PP.H₄ ≈ 0, an artefact of the formula error, and applied a Bonferroni
+threshold to posterior probabilities, which is not meaningful.)
 
 The strength of this negative result is limited by the data available to it, and we do not claim
-otherwise. The `cc` files contain only significance-passed cis pairs: a cluster with no
-significance-passed pairs is **invisible to this scan**, so a true but weak or underpowered sQTL
+otherwise. The `cc` files contain only clusters with a significant cis signal: a cluster without
+one is **invisible to this scan**, so a true but weak or underpowered sQTL
 would produce the same output as a genuinely absent one. Absence of evidence in
 significance-filtered files is not evidence of absence. The defensible statement is therefore
-narrower than "splicing does not operate here": *within the significance-passed fraction of
+narrower than "splicing does not operate here": *among the clusters with a significant signal in
 these five cohorts, we detected no splicing signal at STX6 to interpret.* A claim about the
 relative importance of expression versus splicing at this locus would require either unfiltered
 sQTL statistics or a cohort with adequate power for splicing effects.
@@ -228,20 +284,22 @@ No individual-level human data were generated or obtained beyond public deposits
 
 Our results deliver the three things an independent reanalysis can uniquely provide. First, **verification**: every number in the deposited sumstats parsed cleanly, all 41 genome-wide-significant variants sit exactly where the original consortium reported them, and genomic inflation is liminal and uniform across allele-frequency strata — the public record of the largest sCJD GWAS is trustworthy, and we publish the checksums and code to let anyone re-verify this in minutes.
 
-Second, **an independent reproduction of the STX6 expression association using a different eQTL
-resource**. That genetically increased STX6 expression and protein abundance in brain raise risk of
-sCJD is established work [4], which integrated eQTL and pQTL data with SMR and colocalization
-across 43 authors; the same direction of association has also been reported for Alzheimer disease
-protein abundance [9]. We do not claim this as a discovery. What we add is a reconstruction from a
-different source: a five-cohort brain meta-eQTL built from eQTL Catalogue release 8
-(~2,182 samples), which makes the GWAS lead variant a genome-wide significant STX6 eQTL
-(p = 7.60×10⁻⁴⁷; the regional minimum, a different variant, reaches p = 6.60×10⁻⁴⁷) with concordant
-effect direction in 89% of regional variants, and a regional colocalization that places the entire
-posterior on the both-signals hypotheses. Reproducing the association from an independent eQTL
-resource, with a different cohort set and a different significance threshold, is corroboration of
-the underlying signal rather than a new mechanistic claim. Strict single-variant attribution (H₄)
-is unidentifiable under r² ≥ 0.97 — we say so explicitly — and our posterior split is prior-
-dependent (§4.7).
+Second, **an independent reproduction of the STX6 expression association, and of its
+colocalization, using a different eQTL resource**. That genetically increased STX6 expression and
+protein abundance in brain raise risk of sCJD is established work [4], which integrated eQTL and
+pQTL data with SMR and colocalization across 43 authors; the same direction of association has
+also been reported for Alzheimer disease protein abundance [9]. We do not claim this as a
+discovery. What we add is a reconstruction from a different source: a five-cohort brain meta-eQTL
+built from eQTL Catalogue release 8 (2,156 samples), which makes the GWAS lead variant a
+genome-wide significant STX6 eQTL (p = 7.60×10⁻⁴⁷) with concordant effect direction in 89% of
+regional variants, and an approximate-Bayes-factor colocalization that gives a posterior
+probability of 0.98 for a shared causal variant under the default priors — 0.83 with a ten-fold
+smaller p₁₂, and stable to the effect prior, the meta-analysis model and the cohort set (§4.7).
+This is corroboration of the published signal from an independent eQTL resource, not a new
+mechanistic claim: colocalization supports a shared variant under a single-causal-variant model
+and is not evidence of mediation. Version 0.4 of this preprint reached the opposite reading
+because of an error in our own colocalization formula (see the correction notice); we record
+that plainly, because a reader of v0.4 would have been misled.
 
 Third, **an independent reconstruction of the STX6 haplotype block from deposited statistics
 alone**. Using only the summary statistics and no access to the original authors' fine-mapping
@@ -254,9 +312,9 @@ local LD structure from scratch — and it quantifies, for the first time in thi
 regional posterior mass a summary-statistics-only analysis can attribute (90.5%) versus how much
 remains unattributed, which is the honest ceiling of cluster-level inference.
 
-Fourth, **a cautionary quantification for biomarker research**. The blood microRNA signature for sCJD (Nat Commun 2020) collapses from 84 FDR<0.05-significant miRNAs (no covariate adjustment) to 1 after standard covariate adjustment. Isolating each covariate shows why: age alone (cases 12.8 years older, d = 1.07) removes 84 of the 87 lost signals, RNA integrity alone removes 62, and sex removes 3, with all variance-inflation factors below 1.4 — so the collapse is attributable rather than merely incidental, and ~97% of it is age. Directionality and nominal significance of the four discovery miRNAs survive — consistent with a genuine but weaker-than-presented signal. We stress this is not an accusation: the original authors adjusted age themselves; our contribution is making the magnitude of naive-vs-adjusted divergence, and its attribution, explicit and reproducible for future biomarker pipelines.
+Fourth, **a cautionary quantification for biomarker research**. In the blood microRNA data for sCJD (Nat Commun 2020), the number of FDR-significant miRNAs falls from 89 without covariate adjustment (84 in the v0.4 test universe) to 1 after adjustment for age, sex and RNA integrity. Adding each covariate separately to the group-only model (92 significant) leaves 4 with age, 28 with RNA integrity and 94 with sex. Cases were 12.8 years older than controls (d = 1.07), so age and disease status are partly confounded by design. The counts show that the unadjusted signature does not survive adjustment for age; a comparison of counts across models is not an estimate of how much of the effect age explains, and we no longer state one. Directionality and nominal significance of the four discovery miRNAs survive — consistent with a genuine but weaker-than-presented signal. We stress this is not an accusation: the original authors adjusted age themselves; our contribution is making the divergence between unadjusted and adjusted analyses explicit and reproducible for future biomarker pipelines.
 
-Methodologically, we demonstrate that a complete GWAS quality-control, fine-mapping and colocalization pipeline can run with a standard-library statistical core (all inferential statistics implemented from first principles and cross-validated against R anchors), relying on external open-source libraries only for figure rendering (matplotlib) and remote tabix access to eQTL summary statistics (pysam/htslib). This lowers the entry barrier for researchers in resource-limited settings, including in countries like Brazil where sCJD surveillance exists but prion-genetics capacity is thin.
+Methodologically, the statistical core of this project (Bayes factors, colocalization, the t distribution, Welch's test, Benjamini–Hochberg and least squares) is written in standard-library Python, which keeps it small and inspectable. The project as a whole is not dependency-free: it needs openpyxl to read one dataset, matplotlib and reportlab for figures and the PDF, pysam/htslib for remote eQTL queries, and NumPy, SciPy and statsmodels as test references, all pinned in `requirements.txt`; the GWAS file is not versioned and is fetched by script with an MD5 check. The lesson of the present correction is that a from-scratch core is only as reliable as the references it is tested against: the v0.4 colocalization passed a "validation" that compared two copies of the same wrong formula. The test suite now checks each central result against an independent reference (`coloc.abf` output, SciPy, statsmodels) or against explicit enumeration. With that safeguard, the approach still lowers the entry barrier for researchers in resource-limited settings, including in countries like Brazil where sCJD surveillance exists but prion-genetics capacity is thin.
 
 Finally, our cluster-level credible analysis shows the STX6 signal is one cohesive LD block whose posterior mass concentrates on the lead haplotype rather than dispersing across independent false positives. Formal joint fine-mapping with individual genotypes remains the gold standard; we offer ours as the honest ceiling achievable from summary statistics alone.
 
@@ -264,7 +322,9 @@ Finally, our cluster-level credible analysis shows the STX6 signal is one cohesi
 - Summary-statistics-only: no conditional/joint fine-mapping; cluster-level inference only.
 - Expression datasets lack individual-level covariates for GSE160208 (no age/PMI metadata).
 - Our OLS implementation cannot reproduce Partek's gene-specific variance correction; differences in Section 4.5 may partly reflect estimator choice.
-- Colocalization under r² ≥ 0.97 cannot split H₃ (distinct variants) from H₄ (shared); we report block-level support plus direction concordance instead of an H₄ point estimate.
+- Colocalization assumes at most one causal variant per trait in the region and does not model LD. The H₄ posterior is sensitive to p₁₂ (0.98 with the default 10⁻⁵; 0.83 with 10⁻⁶), and within a block in near-perfect LD part of the H₃/H₄ separation comes from the prior. A high H₄ supports a shared causal variant; it is not evidence of mediation.
+- The two GTEx tissues share donors and are not independent cohorts; on their own they give H₄ of 0.70 and 0.57. The check against `coloc.abf` validates the implementation, not the model.
+- This version corrects an error that reversed the colocalization conclusion of v0.4. No statistical geneticist has reviewed the corrected §4.7.
 - Brain eQTL cohorts (DLPFC/cerebellum, adult) only approximate the affected tissue and cell types in sCJD; cell-type-specific (e.g. microglial) eQTL may differ.
 - Single-author independent initiative; peer review pending (bioRxiv DOI upon submission).
 
@@ -277,13 +337,18 @@ small-RNA-seq), both from the NCBI Gene Expression Omnibus.
 ## 8. Code availability
 All analysis code, reports containing every intermediate number, figure-generation scripts and
 input checksums are version-controlled at https://github.com/BlackYuriJDU/dcj-study
-(release `v1.0.0-preprint-clean`; archived on Zenodo). The inferential statistics — approximate
-Bayes factors, t and F distributions, Benjamini–Hochberg FDR, Welch's test, ordinary least squares
-— are implemented from first principles and cross-validated against R anchors (`coloc.abf`
-5.2.3; see §4.7). External libraries are used only for figure rendering (matplotlib), tabular I/O
-(openpyxl) and remote tabix access to eQTL summary statistics (pysam/htslib). Software versions
-are pinned in `requirements.txt`; every figure and every reported number is regenerated from the
-committed scripts.
+(release `v1.0.0-preprint-clean`; archived on Zenodo; the corrections described in this version
+are recorded in `CORRECOES.md`). The inferential statistics — approximate Bayes factors and
+colocalization, the t distribution, Benjamini–Hochberg FDR, Welch's test, ordinary least squares
+— are implemented from first principles in standard-library Python and checked in the test suite
+against independent references: `coloc.abf` 5.2.3 output for colocalization (§4.7), and SciPy,
+statsmodels and NumPy for the rest. External libraries: openpyxl (tabular input), matplotlib
+(figures), reportlab (PDF), pysam/htslib (remote tabix access to eQTL summary statistics), and
+NumPy, SciPy and statsmodels (tests). Versions are pinned in `requirements.txt`. The GWAS
+summary-statistics file is not versioned: `pipeline/scripts/obter_gwas.py` downloads it from the
+GWAS Catalog and verifies its MD5. `make relatorios` regenerates the analysis reports from the
+committed scripts; the steps that need the GWAS file or network access (Ensembl, NCBI) are
+separate targets.
 
 ## 9. References
 1. Jones E, Hummerich H, Viré E, et al. Identification of novel risk loci and causal insights for
@@ -317,4 +382,5 @@ committed scripts.
 ---
 *Figures: volcano_gse160208.png, volcano_gse140069.png, heatmap_top_genes.png
 (pipeline/reports/figuras/). Fine-mapping numbers from relatorio_finemap_loci.md v2 and
-relatorio_lambda_gc.md. All inferential statistics cross-checked against R anchors.*
+relatorio_lambda_gc.md. Colocalization checked against `coloc.abf` 5.2.3; the other inferential
+statistics are checked against SciPy and statsmodels in the test suite.*
